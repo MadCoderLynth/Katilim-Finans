@@ -1,0 +1,363 @@
+{
+  "bildirim_id": 1566002,
+  "ticker": "THYAO",
+  "gonderim_ts": "2026-03-04T18:57:54",
+  "yil": 2025,
+  "periyot": "Yıllık",
+  "finansal_tablo_niteligi": "Konsolide",
+  "para_birimi_carpani": 1000000,
+  "is_duzeltme": false,
+  "ozet_gelir_orani": "4.92",
+  "ozet_varlik_orani": "18.02",
+  "ozet_borc_orani": "7.24",
+  "beyanlar": {
+    "b1_1": false,
+    "b1_2": false,
+    "b2_1": false,
+    "b2_2": false,
+    "b3_1": false,
+    "b3_2": false,
+    "b4_1": true,
+    "b4_2": false,
+    "b4_3": false,
+    "b4_4": false,
+    "b4_5": false,
+    "b4_6": false,
+    "b4_7": false
+  },
+  "kalemler": [
+    {
+      "tablo": "4B",
+      "kalem_no": 1,
+      "kalem_adi": "Sağlığa zararlı tütün ürünlerinin perakende satışı ve sunumu",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "4B",
+      "kalem_no": 2,
+      "kalem_adi": "Uygun faaliyet göstermeyen şirketlere sunulan iş ve hizmetler",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "4B",
+      "kalem_no": 3,
+      "kalem_adi": "Uygun faaliyet göstermeyen şirketlerden elde edilen kira gelirleri",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "4B",
+      "kalem_no": 4,
+      "kalem_adi": "Reklam, marka, sponsorluk ve aracılık faaliyetleri",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "4C",
+      "kalem_no": 1,
+      "kalem_adi": "Esas Faaliyetlerden Diğer Gelirler",
+      "tutar_ham": "30134"
+    },
+    {
+      "tablo": "4C",
+      "kalem_no": 2,
+      "kalem_adi": "Finansman Gelirleri",
+      "tutar_ham": "30150"
+    },
+    {
+      "tablo": "4C",
+      "kalem_no": 3,
+      "kalem_adi": "Yatırım Faaliyetlerinden Gelirler",
+      "tutar_ham": "48223"
+    },
+    {
+      "tablo": "4C",
+      "kalem_no": 4,
+      "kalem_adi": "Finans Sektörü Faaliyetleri Hasılatı",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "4C",
+      "kalem_no": 5,
+      "kalem_adi": "Özkaynak Yöntemiyle Değerlenen Yatırımların Karlarından Paylar",
+      "tutar_ham": "4596"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 1,
+      "kalem_adi": "Fiyat farkı gelirleri",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 2,
+      "kalem_adi": "Kur farkı gelirleri",
+      "tutar_ham": "17075"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 3,
+      "kalem_adi": "Vade farkı gelirleri",
+      "tutar_ham": "159"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 4,
+      "kalem_adi": "Katılım esaslı kıymetlerden ve fonlardan elde edilen gelirler",
+      "tutar_ham": "1764"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 5,
+      "kalem_adi": "SGK prim gelirleri",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 6,
+      "kalem_adi": "Katılım bankalarından alınan promosyon gelirleri",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 7,
+      "kalem_adi": "Müşteri peşinatları irad kaydı",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 8,
+      "kalem_adi": "Konusu kalmayan karşılıklar",
+      "tutar_ham": "213"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 9,
+      "kalem_adi": "Hizmet gelirleri",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 10,
+      "kalem_adi": "Kira ve bakım onarım gelirleri",
+      "tutar_ham": "1456"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 11,
+      "kalem_adi": "Ardiye gelirleri",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 12,
+      "kalem_adi": "Tazminat ve gecikme ceza gelirleri",
+      "tutar_ham": "3678"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 13,
+      "kalem_adi": "Sigorta hasar tazminat gelirleri",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 14,
+      "kalem_adi": "Dava gelirleri",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 15,
+      "kalem_adi": "Uygun şirketlerden elde edilen temettü gelirleri",
+      "tutar_ham": "41"
+    },
+    {
+      "tablo": "4D",
+      "kalem_no": 16,
+      "kalem_adi": "Diğer uygun sayılan gelirler",
+      "tutar_ham": "36112"
+    },
+    {
+      "tablo": "4E",
+      "kalem_no": 1,
+      "kalem_adi": "Hasılat",
+      "tutar_ham": "955472"
+    },
+    {
+      "tablo": "4E",
+      "kalem_no": 2,
+      "kalem_adi": "Esas Faaliyetlerden Diğer Gelirler",
+      "tutar_ham": "30134"
+    },
+    {
+      "tablo": "4E",
+      "kalem_no": 3,
+      "kalem_adi": "Finansman Gelirleri",
+      "tutar_ham": "30150"
+    },
+    {
+      "tablo": "4E",
+      "kalem_no": 4,
+      "kalem_adi": "Yatırım Faaliyetlerinden Gelirler",
+      "tutar_ham": "48223"
+    },
+    {
+      "tablo": "4E",
+      "kalem_no": 5,
+      "kalem_adi": "Finans Sektörü Faaliyetleri Hasılatı",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "4E",
+      "kalem_no": 6,
+      "kalem_adi": "Özkaynak Yöntemiyle Değerlenen Yatırımların Karlarından Paylar",
+      "tutar_ham": "4596"
+    },
+    {
+      "tablo": "5F",
+      "kalem_no": 1,
+      "kalem_adi": "Nakit ve Nakit Benzerleri",
+      "tutar_ham": "86035"
+    },
+    {
+      "tablo": "5F",
+      "kalem_no": 2,
+      "kalem_adi": "Finansal Yatırımlar",
+      "tutar_ham": "297692"
+    },
+    {
+      "tablo": "5F",
+      "kalem_no": 3,
+      "kalem_adi": "Türev Araçlar",
+      "tutar_ham": "10583"
+    },
+    {
+      "tablo": "5F",
+      "kalem_no": 4,
+      "kalem_adi": "Finans Sektörü Faaliyetlerinden Alacaklar",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "5F",
+      "kalem_no": 5,
+      "kalem_adi": "Özkaynak Yöntemiyle Değerlenen Yatırımlar",
+      "tutar_ham": "32672"
+    },
+    {
+      "tablo": "5F",
+      "kalem_no": 6,
+      "kalem_adi": "İştirakler, İş Ortaklıkları ve Bağlı Ortaklıklardaki Yatırımlar",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "5G",
+      "kalem_no": 1,
+      "kalem_adi": "Çekler",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "5G",
+      "kalem_no": 2,
+      "kalem_adi": "Kasa",
+      "tutar_ham": "31"
+    },
+    {
+      "tablo": "5G",
+      "kalem_no": 3,
+      "kalem_adi": "Vadesiz mevduat hesapları",
+      "tutar_ham": "36112"
+    },
+    {
+      "tablo": "5G",
+      "kalem_no": 4,
+      "kalem_adi": "Katılım esaslı yatırım araçlarındaki tutarlar",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "5G",
+      "kalem_no": 5,
+      "kalem_adi": "Uygun iştirak ve bağlı ortaklıklardaki şirket payları",
+      "tutar_ham": "13257"
+    },
+    {
+      "tablo": "5G",
+      "kalem_no": 6,
+      "kalem_adi": "Kredi kartı alacakları",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "5G",
+      "kalem_no": 7,
+      "kalem_adi": "Diğer uygun sayılan varlıklar",
+      "tutar_ham": "17669"
+    },
+    {
+      "tablo": "5H",
+      "kalem_no": null,
+      "kalem_adi": "Toplam Varlıklar",
+      "tutar_ham": "1996745"
+    },
+    {
+      "tablo": "6I",
+      "kalem_no": 1,
+      "kalem_adi": "Kısa Vadeli Borçlanmalar",
+      "tutar_ham": "70069"
+    },
+    {
+      "tablo": "6I",
+      "kalem_no": 2,
+      "kalem_adi": "Uzun Vadeli Borçlanmaların Kısa Vadeli Kısımları",
+      "tutar_ham": "92367"
+    },
+    {
+      "tablo": "6I",
+      "kalem_no": 3,
+      "kalem_adi": "Uzun Vadeli Borçlanmalar",
+      "tutar_ham": "601817"
+    },
+    {
+      "tablo": "6I",
+      "kalem_no": 4,
+      "kalem_adi": "Türev Araçlar",
+      "tutar_ham": "6359"
+    },
+    {
+      "tablo": "6I",
+      "kalem_no": 5,
+      "kalem_adi": "Finans Sektörü Faaliyetlerinden Borçlar",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "6I",
+      "kalem_no": 6,
+      "kalem_adi": "Diğer Borçlar",
+      "tutar_ham": "12963"
+    },
+    {
+      "tablo": "6J",
+      "kalem_no": 1,
+      "kalem_adi": "Kiralama işlemlerinden borçlar",
+      "tutar_ham": "638976"
+    },
+    {
+      "tablo": "6J",
+      "kalem_no": 2,
+      "kalem_adi": "Katılım bankalarından alınmış krediler",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "6J",
+      "kalem_no": 3,
+      "kalem_adi": "Kira sertifikası, sukuk vb. ihraçlar",
+      "tutar_ham": "0"
+    },
+    {
+      "tablo": "6J",
+      "kalem_no": 4,
+      "kalem_adi": "Diğer uygun sayılan borçlar",
+      "tutar_ham": "0"
+    }
+  ],
+  "aciklamalar": {},
+  "sablon_imzasi": "KAP-2024",
+  "raw_sha256": null
+}

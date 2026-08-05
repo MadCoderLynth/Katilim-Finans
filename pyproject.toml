@@ -1,0 +1,9 @@
+[project]
+name = "katilim-motor"
+version = "0.1.0"
+description = "KAP KAFİF bildirimlerinden BIST katılım uygunluk paneli"
+requires-python = ">=3.10"
+dependencies = ["beautifulsoup4>=4.12"]
+
+[tool.setuptools.packages.find]
+include = ["katilim*"]

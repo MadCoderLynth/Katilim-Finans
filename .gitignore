@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Ham KAP HTML'leri ve üretilen paneller sürüm kontrolüne girmez.
+# Ham arşiv yerelde saklanır (Spec §3.2: ham HTML her zaman saklanır).
+veri/ham/*
+veri/panel/*
+!veri/*/.gitkeep
+
+.DS_Store
+.idea/
+.vscode/
