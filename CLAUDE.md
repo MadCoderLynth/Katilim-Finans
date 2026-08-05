@@ -12,6 +12,7 @@ Detaylar: @BIST_Katilim_Uygunluk_Motoru_Spesifikasyonu_v0.1.md ve @OKUBENI.md
 
 ```bash
 python3 tests/test_motor.py                              # 22 test, pytest gerektirmez
+python3 tests/test_cekici.py                             # 6 test, çekim katmanı (ağa çıkmaz)
 python3 -m katilim.cli dogrula veri/ham/DOSYA.html        # ayrıştır + self-check + karar
 python3 -m katilim.cli dok veri/ham/DOSYA.html            # tanı: tabloları imzalarıyla dök
 python3 -m katilim.cli toplu veri/ham --csv veri/panel/panel.csv
@@ -71,11 +72,30 @@ doğrulama `dogrula` komutunu gerçek bir dosyayla çalıştırmaktır.
 
 ## Sıradaki iş
 
-**Faz 0 bitti** (22/22 test geçiyor), ama parser gerçek KAP HTML'i üzerinde
-hiç çalıştırılmadı. İlk iş: `veri/ham/` içine bir bildirim koyup `dogrula`
-çalıştırmak. Beklenen: `SELF-CHECK: GEÇTİ` + `KARAR: UYGUN_DEGIL
-[G4_DOGRUDAN_AYKIRI]` (THY 2025/Yıllık için). Tutmazsa `dok` çıktısına bakıp
-`ayristirici.TABLO_IMZALARI` ve `BEYAN_IMZALARI` haritalarını düzeltin.
+**Faz 0 bitti — parser gerçek KAP HTML'inde doğrulandı.**
+`veri/ham/THYAO_2025_yillik.html` üzerinde `dogrula`: `SELF-CHECK: GEÇTİ`
+(üç oranda da fark 0,00) + `KARAR: UYGUN_DEGIL [G4_DOGRUDAN_AYKIRI]`.
+Tespit edilen şablon imzası: `4A|4B|4C|4D|4E|5F|5G|5H|6I|6J|OZET|S1|S2|S3`.
+Yani `TABLO_IMZALARI` / `BEYAN_IMZALARI` haritaları gerçek şablona uyuyor —
+artık sentetik HTML'e değil, bu dosyaya karşı regresyon bakılır.
 
-Sonrası: Faz 1 toplama katmanı (spec §3). KAP'ın resmî public API'si yok;
-istekler arası gecikme, tek thread, idempotent çekim.
+**Faz 1: toplama katmanı (spec §3).** Alt katman hazır: `katilim/cekici.py`
+(önbellek → asgari aralık+jitter → oturum bütçesi → geri çekilme). Eksik olan,
+onun üstüne oturacak rotalar:
+
+1. **Şirket listesi** — `/tr/bist-sirketler` → ticker, unvan, pazar, member uuid.
+2. **Bildirim geçmişi** — `/tr/bildirim-sorgu-sonuc?member={uuid}` → KAFİF
+   bildirim_id listesi. Sayfalama ve filtre parametreleri bilinmiyor.
+3. Tekil bildirim `/tr/Bildirim/{id}` zaten `dogrula` ile tüketilebiliyor.
+
+Ayrı bir iş: `/tr/kfif/{sayısal_id}-{slug}` ile `member={uuid}` **farklı
+anahtarlar** (spec §1.1); eşleme kendi başına bir adım, rota keşfiyle
+karıştırmayın.
+
+**Rota keşfinde bütçe düşük tutulur.** İlk tur `HızSınırlayıcı(oturum_butcesi=50)`
+ile koşulur. Amaç evreni doldurmak değil, ölçmek: sayfa başına kaç kayıt
+dönüyor, sunucu tarafı render `requests` ile yetiyor mu yoksa `playwright`
+gerekiyor mu (spec §3.2), bildirim sorgusu sayfalanıyor mu. Bu turda kaç
+istekle ne elde edildiği yazılır, **sonra** bütçe bilinçli yükseltilir.
+`BütçeAşıldı` bir arıza değil karar noktasıdır — kodun içinden otomatik
+büyütmeyin.
