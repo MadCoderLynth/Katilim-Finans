@@ -47,6 +47,21 @@ Test kırıldığında **kuralı değil kodu düzeltin.**
 6. **Ham HTML her zaman saklanır** (`veri/ham/`, sha256 ile). Şablon değişince
    geçmişi yeniden ayrıştırmanın tek yolu bu.
 
+   Ek: sha256 **idempotanlık anahtarı değildir.** KAP markup'ı istekten isteğe
+   değişiyor; aynı bildirimi iki kez çekmek iki farklı sha üretir (rota keşfi
+   §4'te ölçüldü). İdempotanlık `bildirim_id` üzerinden kurulur; sha yalnızca
+   diskteki dosyanın bütünlük damgasıdır.
+
+7. **Boş sonuç ≠ okunamayan sayfa.** "0 kayıt döndü" ile "sayfayı ayrıştıramadım"
+   ayrı durumlardır ve kodda ayrı temsil edilmeleri gerekir. Rota keşfinde iki
+   ölçüm hatası da tam bu karışıklıktan çıktı: sunucunun bastığı "Bildirim
+   bulunamadı" JS iskeleti sanıldı, yanlış yerde aranan kimlik "0 kayıt" diye
+   raporlandı. Ayıklayıcı, beklediği çıpayı (tablo gövdesi, boş-sonuç metni)
+   bulamazsa **hata fırlatır** — sessizce boş liste dönmez.
+
+   Bu, kural 2'nin (eksik beyan ≠ hayır beyanı) toplama katmanındaki karşılığı:
+   her ikisinde de eksik veri, temiz veri gibi görünerek geçiyor.
+
 ## Doğrulanmamış varsayımlar
 
 Karar motorunda kural olarak kodlu ama **kanıtlanmamış** (spec §2.3):
@@ -72,6 +87,10 @@ doğrulama `dogrula` komutunu gerçek bir dosyayla çalıştırmaktır.
 
 ## Sıradaki iş
 
+**Faz planı ve her adımın promptu: @PROJE_PLANI.md.** Adım sırası, çıkış
+kriterleri ve otomatikleştirilmeyecek karar noktaları orada. Aşağıdaki özet
+onunla çelişirse plan değil bu dosya esastır.
+
 **Faz 0 bitti — parser gerçek KAP HTML'inde doğrulandı.**
 `veri/ham/THYAO_2025_yillik.html` üzerinde `dogrula`: `SELF-CHECK: GEÇTİ`
 (üç oranda da fark 0,00) + `KARAR: UYGUN_DEGIL [G4_DOGRUDAN_AYKIRI]`.
@@ -79,23 +98,41 @@ Tespit edilen şablon imzası: `4A|4B|4C|4D|4E|5F|5G|5H|6I|6J|OZET|S1|S2|S3`.
 Yani `TABLO_IMZALARI` / `BEYAN_IMZALARI` haritaları gerçek şablona uyuyor —
 artık sentetik HTML'e değil, bu dosyaya karşı regresyon bakılır.
 
-**Faz 1: toplama katmanı (spec §3).** Alt katman hazır: `katilim/cekici.py`
-(önbellek → asgari aralık+jitter → oturum bütçesi → geri çekilme). Eksik olan,
-onun üstüne oturacak rotalar:
+**Faz 1.0 bitti — rotalar ölçüldü.** Ayrıntı: @ROTA_KESFI_RAPORU.md
+(betik: `arac/rota_kesfi.py`, 16 istek, bütçe 50'nin en fazla 5'i kullanıldı).
 
-1. **Şirket listesi** — `/tr/bist-sirketler` → ticker, unvan, pazar, member uuid.
-2. **Bildirim geçmişi** — `/tr/bildirim-sorgu-sonuc?member={uuid}` → KAFİF
-   bildirim_id listesi. Sayfalama ve filtre parametreleri bilinmiyor.
-3. Tekil bildirim `/tr/Bildirim/{id}` zaten `dogrula` ile tüketilebiliyor.
+Karara bağlananlar:
 
-Ayrı bir iş: `/tr/kfif/{sayısal_id}-{slug}` ile `member={uuid}` **farklı
-anahtarlar** (spec §1.1); eşleme kendi başına bir adım, rota keşfiyle
-karıştırmayın.
+- **`requests` yeter, `playwright` gerekmez.** Sayfalar Next.js ama veri
+  sunucu tarafında basılıyor.
+- **Evren tek istekte geliyor:** `/tr/bist-sirketler` → 746 şirket, gömülü RSC
+  yükünde yapılandırılmış JSON (`stockCode`, `kapMemberTitle`, `mkkMemberOid`).
+  DOM kazımaya gerek yok.
+- **Spec §1.1'in "iki ayrı kimlik" sorunu yok.** `mkkMemberOid` RSC yükünde,
+  `{sayısal_id}-{slug}` aynı satırın href'inde. Ayrı bir eşleme adımı gerekmez.
+- **`bildirim_id`, satırın checkbox `id` niteliğinde** — `/tr/Bildirim/{id}`
+  linki yok. `disclosureClass=DG` gerçek bir filtre: 98 → 12 kayıt, KAFİF
+  satırlarının hepsi korunuyor (n=2, doğrulanmalı).
 
-**Rota keşfinde bütçe düşük tutulur.** İlk tur `HızSınırlayıcı(oturum_butcesi=50)`
-ile koşulur. Amaç evreni doldurmak değil, ölçmek: sayfa başına kaç kayıt
-dönüyor, sunucu tarafı render `requests` ile yetiyor mu yoksa `playwright`
-gerekiyor mu (spec §3.2), bildirim sorgusu sayfalanıyor mu. Bu turda kaç
-istekle ne elde edildiği yazılır, **sonra** bütçe bilinçli yükseltilir.
-`BütçeAşıldı` bir arıza değil karar noktasıdır — kodun içinden otomatik
-büyütmeyin.
+Üç şey Faz 1'in şeklini değiştirdi:
+
+1. **`/tr/kfif/{id}-{slug}` rotası yasak.** Şirket başına tek istek olduğu için
+   cazip ve self-check geçiyor; ama gönderim zaman damgası yok (look-ahead
+   disiplini çöker) ve 4A'nın son üç satırını render etmiyor → `b4_5/6/7` hep
+   `None` → her karar `BELIRSIZ`. Oranlar tuttuğu için "çalışıyor" görünmesi
+   tam da tehlikeli olan yanı: self-check tutarları kapılıyor, beyanların
+   eksiksizliğini değil.
+
+2. **Sorgu penceresi 1 yıl ve kayıyor.** `fromDate/toDate`, `year`,
+   `startDate/endDate` üçü de yok sayıldı. İki şirkette de en eski kayıt günü
+   gününe bir yıl öncesi. Sonuç: **çekilmeyen her gün kalıcı kayıp**;
+   `veri/ham/` bir önbellek değil, telafisi olmayan arşivin kendisi. Asla
+   temizlenmez. Faz 2 için ayrı bir keşif adımı açıldı (plan 2.0).
+
+3. **Pazar bilgisi bu rotada yok** (şehir ve denetim firması var). XKTUM'un ön
+   şartı olduğu için (spec §0.4) ikinci kaynak gerekiyor — henüz bulunmadı.
+
+**Bütçe hâlâ karar noktasıdır.** Ölçülen maliyet ~3,2 sn/istek. Onaylanmış
+bütçeler: 1.1 → 5, 1.2 → 800, 1.3 → 30, 1.4 → 2.600. Bunlar plan adımı başına
+ayrı ayrı verilir; `BütçeAşıldı` bir arıza değil, sorulacak bir sorudur —
+kodun içinden otomatik büyütmeyin.

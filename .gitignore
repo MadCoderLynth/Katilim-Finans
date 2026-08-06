@@ -5,9 +5,19 @@ venv/
 
 # Ham KAP HTML'leri ve üretilen paneller sürüm kontrolüne girmez.
 # Ham arşiv yerelde saklanır (Spec §3.2: ham HTML her zaman saklanır).
+#
+# DİKKAT: bu dizinler bir önbellek değil, telafisi olmayan arşivdir —
+# KAP sorgu penceresi 1 yıl ve kayıyor (ROTA_KESFI_RAPORU.md §5).
+# Git'e girmiyorlar diye silinebilir sayılmazlar; ayrı yedeklenmeleri gerekir.
 veri/ham/*
 veri/panel/*
+veri/onbellek/*
+veri/evren/*
+veri/referans/*
 !veri/*/.gitkeep
+
+.claude/settings.local.json
+COMMIT_MESAJI.txt
 
 .DS_Store
 .idea/
