@@ -4,14 +4,20 @@ Bu belge, her fazın Claude Code'a verilecek promptlarını içerir. Kaynaklar:
 `CLAUDE.md` (değiştirilemez kurallar), spec v0.1 (§4 faz tanımları),
 `DEVIR_NOTU_2026-08-05.md` (alan bulguları ve teknik durum).
 
-**Durum (5 Ağu 2026):** Faz 0 tek örnekte doğrulandı (THY 2025/Yıllık,
-self-check GEÇTİ). Faz 1.0 (rota keşfi) bitti — `ROTA_KESFI_RAPORU.md`.
-Sıradaki: **Faz 2.0** (sıra değişti — gerekçe "Faz bağımlılıkları"nda).
+**Durum (6 Ağu 2026):** Faz 0 ✔ (THY 2025/Yıllık, self-check GEÇTİ) ·
+1.0 rota keşfi ✔ · 1.1 evren ✔ (795 ticker / 746 tüzel kişi).
+51 test geçiyor. Sıradaki: **2.0** ve **1.1b** — ikisi bağımsız, sırası
+önemsiz; 1.2'nin kodu yazılmadan ikisi de bitmiş olmalı.
 
-**Rota keşfinin plana getirdiği üç değişiklik:** eski 1.2 (kimlik eşlemesi)
-iptal — iki kimlik aynı istekten çıkıyor; eski 2.1 (bildirim geçmişi) 1.2'ye
-taşındı — pencere 1 yıl olduğu için güncel ile geçmiş aynı istek; Faz 2 bloke,
-önüne 2.0 derinlik keşfi eklendi.
+Planın şeklini değiştiren bulgular:
+
+| Nereden | Ne değişti |
+|---|---|
+| 1.0 | Eski 1.2 (kimlik eşlemesi) iptal — iki kimlik aynı istekten çıkıyor |
+| 1.0 | Eski 2.1 (bildirim geçmişi) 1.2'ye taşındı — pencere 1 yıl |
+| 1.0 | Faz 2 bloke; önüne 2.0 derinlik keşfi eklendi |
+| 1.1 | Evren 795 ticker / 746 tüzel kişi — sorgu ekseni uuid, panel ekseni ticker |
+| 1.1 | Pazar sondası endeks üyeliğini de buldu → 1.1b ve 4.0 açıldı |
 
 ---
 
@@ -137,7 +143,35 @@ BütçeAşıldı alırsan bütçeyi yükseltme; ne kadarını ölçebildiysen on
 
 ---
 
-## 1.1 — Evren çekimi · bütçe **5**
+## 1.1 — Evren çekimi ✔ **BİTTİ (6 Ağu 2026)**
+
+`katilim/evren.py`, 23 test, `veri/evren/sirketler.csv` kalıcı.
+
+```
+795 pay kodu / 746 tüzel kişi      slug eşleşen: 795/795
+muafiyet: 150 muaf · 612 değil · 33 belirsiz (el ile bakılacak)
+```
+
+**Rota keşfi raporunun bir ölçümü düzeltildi:** `stockCode` virgüllü çoklu
+kod taşıyabiliyor (`"ALBRK, ALK"`), 45 tüzel kişide böyle. "746 benzersiz
+stockCode" dize olarak doğru, pay kodu olarak değildi. Sonuç: **evren 795
+ticker, 746 tüzel kişi.**
+
+> **Aşağı akışa taşınan sonuç — panelin iki ekseni var.**
+> KAFİF ve dolayısıyla **karar tüzel kişi düzeyinde** (bir beyan, tek uuid).
+> Endeks üyeliği ise **pay kodu düzeyinde**: XKTUM'a girmek için likidite ve
+> fiili dolaşım şartları da var ve bunlar kod bazında değerlendiriliyor.
+> Aynı tüzel kişinin bir kodu endekste olup diğeri olmayabilir.
+>
+> Bu yüzden: 1.2/1.4 **uuid başına** çeker (746, 795 değil); panel **ticker
+> başına** satır tutar; mutabakat (4.0/4.2) ticker düzeyinde yapılır ve
+> "aynı uuid'in kodları arasında ayrışma" ayrı bir uyuşmazlık sınıfıdır —
+> kriter kaynaklı değil likidite kaynaklıdır ve **H1–H4'ün reddi sayılmaz.**
+
+*1.1 promptu arşiv olarak duruyor.*
+
+<details>
+<summary>1.1 promptu (arşiv)</summary>
 
 ```
 Görev: 746 şirketlik evreni kalıcı hale getir.
@@ -182,8 +216,54 @@ olur. En az: RSC ayrıştırma, stockCode ile href eşleme, eşleşmeyen satır,
 muafiyet sınıflaması (banka=muaf, holding=muaf değil, belirsiz=None).
 ```
 
-**Çıkış kriteri:** `sirketler.csv`'de 746 satır; her satırda ticker + uuid +
-slug; muafiyeti belirsiz olanlar ayrı listede; pazar sondasının sonucu yazılı.
+**Çıkış kriteri:** ✔ karşılandı (795 satır, 746 uuid).
+
+</details>
+
+---
+
+## 1.1b — Şirket özet sayfaları · bütçe **800**
+
+> Pazar sondası beklenenden fazlasını buldu; ayrı adım oldu.
+
+```
+Görev: 746 tüzel kişinin özet sayfasını çek, üç alanı evrene bas.
+
+Rota: /tr/sirket-bilgileri/ozet/{id}-{slug} — sunucu tarafında render
+ediliyor, 1.1'in sondasında 3 şirkette (THYAO, ACSEL, ASELS) doğrulandı.
+
+Çekilecek alanlar:
+- "Sermaye Piyasası Aracının İşlem Gördüğü Pazar" -> pazar
+  (YILDIZ PAZAR / ANA PAZAR / ALT PAZAR) — spec §0.4'ün XKTUM ön şartı
+- "Şirketin Sektörü" -> sektor
+- "Dahil Olduğu Endeksler" -> endeksler (liste)
+  BIST KATILIM 30/50/100/TÜM üyeliği buradan çıkıyor. Bu alan 4.0'ın
+  girdisi; ayrı bir sütuna değil, ayrı bir tabloya yaz:
+  veri/evren/endeks_uyeligi.csv (ticker, endeks_adi, olcum_tarihi)
+  DİKKAT: bu GÜNCEL üyelik, tarihsel değil. olcum_tarihi olmadan
+  saklanırsa ileride nokta-zaman sanılır — tarih zorunlu alan.
+
+İstek sayısı uuid başına 1 = 746 (795 değil; çoklu kodlu tüzel kişiler
+aynı sayfayı paylaşıyor). ~40 dk. İlerlemeyi 50 istekte bir diske yaz,
+koşu kesilirse kaldığı yerden devam etsin.
+
+Sonra: 33 belirsiz muafiyeti sektör alanıyla yeniden değerlendir.
+- Kapanabilenleri kapat, gerekçesini yaz.
+- Kapanmayan kalırsa MUAF İŞARETLEME, belirsiz bırak. Yanlış muafiyet
+  şirketi sessizce panelden düşürür; fazladan sorgulamak zararsızdır.
+- KTLEV özel vaka: spec §0.4 "KAFİF doldurmuyor" diyor ama tasarruf
+  finansman şirketleri muafiyet listesinde yazılı değil. Sektör alanı
+  ne diyor, bak ve bana getir — çözüm ya spec §0.4'e madde eklemek ya
+  da "muaf değil ama beyan vermiyor" diye üçüncü bir durum tanımlamak.
+  Kendi başına seçme.
+
+Test: pazar/sektör/endeks ayıklama, alanı olmayan sayfa (None kalmalı,
+boş dize değil), 33 belirsizin yeniden sınıflaması.
+```
+
+**Çıkış kriteri:** 746 sayfa çekilmiş; `sirketler.csv`'de pazar ve sektör
+dolu; `endeks_uyeligi.csv` ölçüm tarihiyle yazılmış; belirsiz muafiyet
+sayısı düşmüş ve kalanlar gerekçeli.
 
 ---
 
@@ -193,7 +273,12 @@ slug; muafiyeti belirsiz olanlar ayrı listede; pazar sondasının sonucu yazıl
 > aynı istekten çıkıyor; ayrı faz tutmanın anlamı kalmadı.
 
 ```
-Görev: Her şirket için KAFİF bildirim kimliklerini topla.
+Görev: Her tüzel kişi için KAFİF bildirim kimliklerini topla.
+
+Sorgu ekseni TİCKER DEĞİL UUID: 795 ticker var ama 746 tüzel kişi.
+Çoklu kodlu şirketleri (ALBRK/ALK gibi) iki kez sorgulamak 45 gereksiz
+istek ve aynı bildirimin iki kaydı demek. Muaf olmayan uuid'ler üzerinden
+döngü kur, sonucu ticker'lara sonradan dağıt.
 
 Rota: /tr/bildirim-sorgu-sonuc?member={mkkMemberOid}&disclosureClass=DG
 bildirim_id, satırın checkbox id niteliğinde (<input name="notification-
@@ -581,6 +666,53 @@ reddediliyor.
 **Spec çıkış kriteri:** Uyuşmazlık oranı <%5; her uyuşmazlık ya parser
 hatası ya H1-H4 revizyonu olarak açıklanmış.
 
+## 4.0 — Nokta-zaman ön mutabakat · ağ isteği **yok**
+
+> 1.1b'nin `endeks_uyeligi.csv`'si sayesinde mümkün oldu. Tarihsel
+> mutabakatın yerini TUTMAZ; onu erkene çeker.
+
+```
+Görev: 1.4 biter bitmez kararlarımızı bugünkü XKTUM üyeliğiyle karşılaştır.
+
+Ön koşul: 1.1b (endeks üyeliği) + 1.4 (panel) tamam. Ağa çıkmaz, iki
+yerel dosyayı karşılaştırır.
+
+Neden şimdi: H1-H4 doğrulanmadan üretilen panel araştırma çıktısıdır.
+Tarihsel PDF'leri (4.1) beklemeden sınayabildiğimiz kadarını sınamak,
+parser ve karar hatalarını Faz 3'e taşımadan yakalar.
+
+Karşılaştırma: karar UYGUN/TOLERANSTA <-> "BIST KATILIM TÜM" üyeliği var.
+Ticker düzeyinde yapılır (endeks üyeliği kod bazında).
+
+DÖRT SINIF, ve üçü uyuşmazlık DEĞİL — bunları ayırmadan oran hesaplama:
+
+1. GERÇEK UYUŞMAZLIK — karar ile üyelik çelişiyor, aşağıdaki üç
+   açıklamanın hiçbiri geçerli değil. Asıl inceleme konusu bu.
+2. DÖNEM UYUMSUZLUĞU — elimizdeki KAFİF, endeksin son revizyonundan
+   (1 May / 1 Eki) SONRA yayımlanmış. Endeks bunu henüz görmemiş
+   olabilir; çelişki beklenen davranış. gonderim_ts ile son revizyon
+   tarihini karşılaştırıp otomatik etiketle.
+3. KOD AYRIŞMASI — aynı uuid'in bir kodu endekste, diğeri değil.
+   Likidite/fiili dolaşım kaynaklı, kriter kaynaklı değil. H1-H4'ün
+   reddi SAYILMAZ.
+4. KAPSAM — KAPSAM_DISI, BEYAN_YOK, BELIRSIZ kayıtlar. Ayrı sayılır.
+
+Yanlış pozitif (biz UYGUN, BIST dışarıda) ayrı raporlanır: uygunsuzu
+uygun göstermek, uygunu kaçırmaktan pahalıdır.
+
+Çıktı: ON_MUTABAKAT_{tarih}.md — dört sınıfın sayıları, gerçek
+uyuşmazlıkların listesi (ticker, kararımız, gerekçemiz, üyelik durumu),
+hipotez bazında gruplama, ve tek cümlelik sonuç.
+
+Bu adım hipotez REVİZE ETMEZ, yalnız aday listesi çıkarır. Revizyon 4.3'te,
+tarihsel veriyle birlikte yapılır.
+```
+
+**Çıkış kriteri:** Dört sınıf ayrılmış; gerçek uyuşmazlık oranı ölçülmüş;
+şüpheli hipotezler adaylandırılmış.
+
+---
+
 ## 4.1 — Resmî referans verisini topla
 
 ```
@@ -772,20 +904,20 @@ test edilmiş; entegrasyon biçimi 5.2 sonucuyla tutarlı.
 ## Faz bağımlılıkları
 
 ```
-1.0 ✔ ─► 2.0 ─► 1.1 ─► 1.2 ─► 1.3 ─► 1.4 ─► 2.2 ─► 2.3 ─► 3.1 ─► 3.2 ─► 3.3
-           └──► 2.1 (koşullu) ──────────────►┘                            │
-                                                                          ▼
-                                      4.1 ─► 4.2 ─► 4.3 ─► 5.1 ─► 5.2 ─► 5.3
+1.0 ✔ ─► 1.1 ✔ ─► 1.1b ─► 1.2 ─► 1.3 ─► 1.4 ─► 4.0 ─► 2.2 ─► 2.3 ─► 3.1 ─► 3.2 ─► 3.3
+    2.0 ─┴──► 2.1 (koşullu) ─────────────────────►┘                                │
+                                                                                   ▼
+                                               4.1 ─► 4.2 ─► 4.3 ─► 5.1 ─► 5.2 ─► 5.3
 ```
 
-**2.0 öne alındı (6 Ağu 2026).** Planda başta 1.3'ten sonraydı; sıra
-değişti çünkü 2.0'ın cevabı `toplayici.py`'nin tasarımını belirliyor —
-"tek sabit pencere" ile "keyfi derinlik + sayfalama" aynı modül değil.
-Modülü iki kez yazmak, 30 isteği harcamaktan pahalı. 1.1 (5 istek) 2.0'dan
-bağımsız, sırası önemsiz.
+**2.0 hâlâ koşulmadı ve gecikiyor.** 1.2'nin toplama kodunu yazmadan önce
+koşulmalı: cevabı `toplayici.py`'nin "tek sabit pencere" mi "keyfi derinlik
++ sayfalama" mı olacağını belirliyor, ve modülü iki kez yazmak 30 isteği
+harcamaktan pahalı. Ayrıca sonda 0 (pencere kayıyor mu) her geçen gün
+bayatlıyor — taban ölçüm 05.08.2026 ve tek istekle sınanıyor.
 
-2.1 yalnız 2.0 bir yol bulursa devreye girer. 4.1 (XKTUM referans verisi)
-Faz 3 ile paralel başlatılabilir.
+2.1 yalnız 2.0 bir yol bulursa devreye girer. 4.1 (tarihsel XKTUM verisi)
+Faz 3 ile paralel başlatılabilir; 4.0 onu beklemez.
 
 **Kritik yol 1.4'ten geçiyor ve zaman duyarlı** — sorgu penceresi kayıyorsa
 geciken her gün panel derinliğinden düşüyor.
@@ -797,11 +929,14 @@ Bu noktalarda Claude Code durup sormalı; kendi başına seçmemeli:
 | Nerede | Karar | Durum |
 |---|---|---|
 | 1.0 sonrası | requests mi playwright mi | ✔ requests |
-| 1.0 sonrası | adım bütçeleri | ✔ 5 / 800 / 30 / 2.600 |
-| 1.1 | Pazar bilgisi kaynağı ve maliyeti | açık |
+| 1.0 sonrası | adım bütçeleri | ✔ 5 / 800 / 800 / 30 / 2.600 |
+| 1.1 | Pazar bilgisi kaynağı ve maliyeti | ✔ özet sayfası, +746 onaylandı |
+| 1.1b | KTLEV / tasarruf finansman: spec §0.4'e madde mi, yeni durum mu | açık |
+| 1.1b | Sektörle kapanmayan belirsiz muafiyetler | açık |
 | 1.2 | `disclosureClass=DG` KAFİF kaybettiriyorsa ne yapılacak | açık |
 | 1.4 | Koşu kapsamı (güncel mi tüm pencere mi) | ✔ tüm pencere |
 | 2.0 sonrası | Derinlik bulunduysa ek bütçe; bulunmadıysa Faz 2 kapanır | açık |
+| 4.0 sonrası | Şüpheli hipotezler 4.3'e mi bekletilecek, erken mi revize | açık |
 | 3.1 | Zincir boşluğunda tolerans durumu ne olur | açık |
 | 3.2 | Ortalama PD kaynağı ve hangi dönemin ortalaması | açık |
 | 4.3 | Hipotez reddi ve yerine geçecek kural | açık |

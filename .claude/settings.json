@@ -3,7 +3,12 @@
     "allow": [
       "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe arac/rota_kesfi.py)",
       "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -c ' *)",
-      "Bash(echo \"cikis: $?\")"
+      "Bash(echo \"cikis: $?\")",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -m katilim.cli evren --yenile)",
+      "Bash(echo \"=== CIKIS: $? ===\")",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -m katilim.cli evren)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/fixtures/olustur_evren_parca.py)",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe tests/test_evren.py)"
     ]
   }
 }

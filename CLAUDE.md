@@ -91,6 +91,31 @@ doğrulama `dogrula` komutunu gerçek bir dosyayla çalıştırmaktır.
 kriterleri ve otomatikleştirilmeyecek karar noktaları orada. Aşağıdaki özet
 onunla çelişirse plan değil bu dosya esastır.
 
+### Nerede kaldık (6 Ağu 2026)
+
+Biten: **Faz 0** · **1.0** rota keşfi · **1.1** evren.
+Testler: 51 geçiyor (22 motor + 6 çekici + 23 evren).
+
+Sıradaki iki adım bağımsız, sırası önemsiz — ama **ikisi de 1.2'nin kodu
+yazılmadan bitmiş olmalı:**
+
+- **2.0 derinlik keşfi** (bütçe 30). Cevabı `toplayici.py`'nin şeklini
+  belirliyor: "tek sabit pencere" ile "keyfi derinlik + sayfalama" aynı
+  modül değil. İçindeki *sonda 0* (pencere kayıyor mu) tek istek ve her
+  gün bayatlıyor; taban ölçüm 05.08.2026.
+- **1.1b özet sayfaları** (bütçe 800). Pazar + sektör + endeks üyeliği.
+
+**Evren 795 pay kodu / 746 tüzel kişi.** `stockCode` virgüllü çoklu kod
+taşıyabiliyor (`"ALBRK, ALK"`, 45 tüzel kişide). Bunun iki sonucu var ve
+ikisi de aşağı akışı bağlıyor:
+
+1. **Sorgu ekseni uuid, panel ekseni ticker.** Bildirim sorgusu ve form
+   çekimi tüzel kişi başına (746); panel satırı pay kodu başına (795).
+2. **Karar tüzel kişi düzeyinde, endeks üyeliği pay kodu düzeyinde.** Aynı
+   uuid'in bir kodu XKTUM'da olup diğeri olmayabilir (likidite ve fiili
+   dolaşım şartları kod bazında). Mutabakatta bu **sahte uyuşmazlıktır** ve
+   H1–H4'ün reddi sayılmaz — ayrı sınıflandırın.
+
 **Faz 0 bitti — parser gerçek KAP HTML'inde doğrulandı.**
 `veri/ham/THYAO_2025_yillik.html` üzerinde `dogrula`: `SELF-CHECK: GEÇTİ`
 (üç oranda da fark 0,00) + `KARAR: UYGUN_DEGIL [G4_DOGRUDAN_AYKIRI]`.

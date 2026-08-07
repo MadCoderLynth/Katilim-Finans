@@ -79,8 +79,8 @@ DOM kazımaya gerek yok:
 ```
 
 ```
-Kayıt sayısı        : 746
-Benzersiz stockCode : 746   (boş ticker yok, çakışma yok)
+Kayıt sayısı        : 746 tüzel kişi
+Pay kodu            : 795   (stockCode virgüllü olabilir: "ALBRK, ALK")
 kapMemberType       : tamamı 'IGS'
 Alanlar             : mkkMemberOid, kapMemberTitle, relatedMemberTitle,
                       stockCode, cityName, relatedMemberOid, kapMemberType
@@ -303,10 +303,14 @@ yükseltme kararı ölçüme değil, yukarıdaki iş hacmine dayanıyor.
 
 ## 9. Açık kalan / kararsız noktalar
 
-1. **Pazar bilgisi kaynağı yok.** `/tr/bist-sirketler` pazar sütunu taşımıyor.
-   XKTUM ön şartı olduğu için (Spec §0.4) ikinci bir kaynak gerekiyor — şirket
-   özet sayfası (`/tr/sirket-bilgileri/ozet/{id}-{slug}`) denenmedi; denenirse
-   şirket başına +746 istek demek.
+1. ~~**Pazar bilgisi kaynağı yok.**~~ **ÇÖZÜLDÜ (Faz 1.1 sondası, 3 istek).**
+   Şirket özet sayfası `/tr/sirket-bilgileri/ozet/{id}-{slug}` sunucu tarafında
+   şunları veriyor: `Sermaye Piyasası Aracının İşlem Gördüğü Pazar`
+   (YILDIZ PAZAR / ANA PAZAR), `Şirketin Sektörü` ve **`Dahil Olduğu Endeksler`**
+   — sonuncusu BIST KATILIM 30/50/100/TÜM üyeliğini içeriyor, yani Faz 4
+   mutabakatının resmî tarafı. Maliyet: tüzel kişi başına 1 istek = **+746**
+   (795 değil; çoklu pay kodlu şirketler tek sayfa paylaşıyor) ≈ 40 dk.
+   **Henüz çekilmedi** — karar bekliyor.
 2. **1 yıldan geriye gidilemiyor.** Üç tarih parametresi de yok sayıldı. Faz 2
    bu haliyle bloke. Denenmemiş yollar: "Detaylı Sorgulama" sayfasının POST
    gövdesi, `disclosureClass` dışındaki filtre adları, BIST'in dönemsel

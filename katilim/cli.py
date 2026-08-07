@@ -17,6 +17,7 @@ import json
 import pathlib
 import sys
 
+from . import evren
 from .ayristirici import AyristirmaHatasi, ayristir, dok
 from .karar import degerlendir, seri_degerlendir
 from .oranlar import self_check
@@ -144,6 +145,69 @@ def cmd_toplu(args) -> int:
     return 1 if karantina else 0
 
 
+def cmd_evren(args) -> int:
+    """BIST şirket evrenini gösterir; --yenile ile KAP'tan tazeler.
+
+    Varsayılan olarak ağa ÇIKMAZ. Çekim bilinçli bir eylem olmalı.
+    """
+    if not args.yenile:
+        sirketler = evren.oku(args.csv)
+        if not sirketler:
+            print(
+                f"{args.csv} yok. Önce: python -m katilim.cli evren --yenile",
+                file=sys.stderr,
+            )
+            return 2
+        muaf = sum(1 for s in sirketler if s.mali_sektor_muaf is True)
+        belirsiz = [s.ticker for s in sirketler if s.mali_sektor_muaf is None]
+        print(f"{args.csv}: {len(sirketler)} pay kodu, "
+              f"{len({s.kap_member_uuid for s in sirketler})} tüzel kişi")
+        print(f"  mali sektör muaf : {muaf}")
+        print(f"  EL İLE BAKILACAK : {len(belirsiz)} -> {', '.join(belirsiz)}")
+        return 0
+
+    from .cekici import BütçeAşıldı, HızSınırlayıcı, Çekici
+
+    cekici = Çekici(
+        args.onbellek,
+        sinirlayici=HızSınırlayıcı(min_aralik=2.0, jitter=1.0, oturum_butcesi=args.butce),
+    )
+    try:
+        html = cekici.getir(evren.BIST_SIRKETLER_URL, zorla=args.zorla)
+    except BütçeAşıldı as e:
+        print(f"BÜTÇE: {e}", file=sys.stderr)
+        return 2
+
+    sirketler, rapor = evren.evreni_ayristir(html)
+    if not sirketler:
+        # "0 kayıt" ile "sayfa okunamadı" farklı şeyler; ikisi de sessiz
+        # geçilmemeli (ROTA_KESFI_RAPORU.md §10).
+        print("EVREN BOŞ: sayfa alındı ama tek kayıt çıkarılamadı. "
+              "RSC yükü değişmiş olabilir.", file=sys.stderr)
+        return 2
+
+    onceki = evren.oku(args.csv)
+    arsiv = evren.yaz(sirketler, args.csv)
+    eklenen, cikan = evren.fark(onceki, sirketler)
+
+    print(f"EVREN         : {len(sirketler)} pay kodu -> {args.csv}")
+    print(rapor.rapor())
+    if rapor.belirsiz:
+        print(f"  EL İLE BAKILACAK : {', '.join(rapor.belirsiz)}")
+    if arsiv:
+        print(f"  önceki sürüm     : {arsiv}")
+    if onceki:
+        print(f"\nEVREN DEĞİŞİMİ: +{len(eklenen)} / -{len(cikan)}")
+        if eklenen:
+            print(f"  eklenen : {', '.join(eklenen)}")
+        if cikan:
+            print(f"  çıkan   : {', '.join(cikan)}")
+    print(f"\nistek: {cekici.istatistik}")
+
+    # Eşleşmeyen kayıt sessizce düşmedi ama temiz de değil.
+    return 1 if (rapor.slug_bulunamayan or rapor.domda_olup_rscde_olmayan) else 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="katilim", description=__doc__)
     alt = p.add_subparsers(dest="komut", required=True)
@@ -157,6 +221,14 @@ def main(argv=None) -> int:
     sp.add_argument("klasor")
     sp.add_argument("--csv", help="çıktıyı CSV'ye yaz")
     sp.set_defaults(fn=cmd_toplu)
+
+    sp = alt.add_parser("evren")
+    sp.add_argument("--yenile", action="store_true", help="KAP'tan tazele (1 istek)")
+    sp.add_argument("--csv", default=str(evren.EVREN_CSV))
+    sp.add_argument("--onbellek", default="veri/onbellek")
+    sp.add_argument("--butce", type=int, default=5, help="oturum istek bütçesi")
+    sp.add_argument("--zorla", action="store_true", help="önbelleği atla")
+    sp.set_defaults(fn=cmd_evren)
 
     args = p.parse_args(argv)
     return args.fn(args)
