@@ -31,7 +31,12 @@ from pathlib import Path
 
 from bs4 import BeautifulSoup
 
+from . import rsc
 from .metin import normalize
+
+
+class EvrenOkunamadi(RuntimeError):
+    """Sayfa alındı ama kayıtlar okunamadı. 'Şirket yok' DEĞİLDİR (kural 7)."""
 
 BIST_SIRKETLER_URL = "https://kap.org.tr/tr/bist-sirketler"
 
@@ -196,17 +201,28 @@ class EvrenRaporu:
 def rsc_kayitlari(html: str) -> list[dict]:
     """Gömülü RSC yükündeki şirket kayıtları.
 
-    Yük bir script string'inin içinde, yani tırnaklar kaçışlı. Önce kaçış
-    geri alınır, sonra JSON okunur.
+    Çözme işi `katilim.rsc`'de. Oradaki uzun gerekçenin kısası: yük bir JS
+    dize literali ve naif kaçış çözme, içinde tırnak geçen kayıtları sessizce
+    düşürüyor. Unvanında tırnak olan bir şirket (KAP'ta bugün yok ama yarın
+    olabilir) bu yüzden evrenden kaybolurdu.
+
+    Kayıt **içerik imzasıyla** tanınır (kural 4): sayfada `mkkMemberOid` ile
+    başlayan 3.029 nesne var ve bunların 2.282'si fon kaydı. Şirket kaydını
+    ayıran şey konumu değil, `kapMemberTitle` + `kapMemberType` alanlarını
+    taşıması.
     """
-    duz = html.replace('\\"', '"')
-    kayitlar = []
-    for ham in _KAYIT_RE.findall(duz):
-        try:
-            kayitlar.append(json.loads(ham))
-        except json.JSONDecodeError:
-            continue
-    return kayitlar
+    ayiklama = rsc.baslayan_nesneler(html, "mkkMemberOid")
+    if ayiklama.bozuk:
+        # Sessizce yutulmaz: aday görülüp okunamayan kayıt varsa sayfa
+        # yapısı değişmiş demektir.
+        raise EvrenOkunamadi(
+            f"{ayiklama.bozuk} kayıt ayrıştırılamadı "
+            f"({ayiklama.aday} aday, {len(ayiklama.kayitlar)} okundu)"
+        )
+    return [
+        k for k in ayiklama.kayitlar
+        if "kapMemberTitle" in k and "kapMemberType" in k
+    ]
 
 
 def unvan_slug(unvan: str) -> str:

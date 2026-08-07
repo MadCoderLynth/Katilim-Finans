@@ -88,17 +88,59 @@ class HızSınırlayıcı:
 
 @dataclass
 class Önbellek:
-    """URL -> disk. Ham HTML her zaman saklanır (Spec §3.2)."""
+    """URL -> disk. Ham HTML her zaman saklanır (Spec §3.2).
+
+    İki katman var:
+
+      - **Olumlu önbellek**: 200 dönen gövde, `{hash}.html` olarak.
+      - **Negatif önbellek**: kalıcı hata (404 gibi) dönen URL, `negatif.tsv`
+        olarak. Bu olmadan muaf/beyansız şirketler ve ölü rotalar HER koşuda
+        yeniden sorgulanır — 746 şirketlik bir taramada bu, boşa giden
+        yüzlerce istek demek (ROTA_KESFI_RAPORU §9/6).
+
+    Negatif kayıt bir **karar** değil bir **gözlemdir**: "bu URL şu tarihte
+    şu durumu döndü". Yorumu (muaf mı, beyan yok mu) üst katmana ait.
+    """
 
     kok: Path
 
     def __post_init__(self) -> None:
         self.kok = Path(self.kok)
         self.kok.mkdir(parents=True, exist_ok=True)
+        self._negatif: dict[str, tuple[int, str]] | None = None
 
     def _yol(self, url: str) -> Path:
         ad = hashlib.sha256(url.encode()).hexdigest()[:24]
         return self.kok / f"{ad}.html"
+
+    # --- negatif önbellek ---------------------------------------------
+
+    @property
+    def negatif_yolu(self) -> Path:
+        return self.kok / "negatif.tsv"
+
+    def _negatifi_yukle(self) -> dict[str, tuple[int, str]]:
+        if self._negatif is None:
+            self._negatif = {}
+            if self.negatif_yolu.exists():
+                for satir in self.negatif_yolu.read_text(encoding="utf-8").splitlines():
+                    parcalar = satir.split("\t")
+                    if len(parcalar) >= 3:
+                        try:
+                            self._negatif[parcalar[0]] = (int(parcalar[1]), parcalar[2])
+                        except ValueError:
+                            continue
+        return self._negatif
+
+    def negatif_durum(self, url: str) -> tuple[int, str] | None:
+        """(http_durumu, tarih) — daha önce kalıcı hata alındıysa."""
+        return self._negatifi_yukle().get(url)
+
+    def negatif_yaz(self, url: str, durum: int) -> None:
+        tarih = time.strftime("%Y-%m-%d")
+        self._negatifi_yukle()[url] = (durum, tarih)
+        with self.negatif_yolu.open("a", encoding="utf-8") as f:
+            f.write(f"{url}\t{durum}\t{tarih}\n")
 
     def var_mi(self, url: str) -> bool:
         return self._yol(url).exists()
@@ -136,12 +178,22 @@ class Çekici:
         self.getir_fn = getir_fn or _requests_ile_getir
         self.azami_deneme = azami_deneme
         self.user_agent = user_agent
-        self.istatistik = {"onbellek": 0, "ag": 0, "yeniden_deneme": 0}
+        self.istatistik = {"onbellek": 0, "ag": 0, "yeniden_deneme": 0, "negatif": 0}
 
     def getir(self, url: str, *, zorla: bool = False) -> str:
         if not zorla and self.onbellek.var_mi(url):
             self.istatistik["onbellek"] += 1
             return self.onbellek.oku(url)
+
+        if not zorla:
+            onceki = self.onbellek.negatif_durum(url)
+            if onceki:
+                # Ağa çıkmadan aynı hatayı veriyoruz: bu bir "sonuç yok"
+                # DEĞİL, "daha önce alınamadı" bilgisidir (kural 7).
+                self.istatistik["negatif"] += 1
+                raise ÇekimHatası(
+                    f"negatif önbellek: HTTP {onceki[0]} ({onceki[1]}) — {url}"
+                )
 
         basliklar = {"User-Agent": self.user_agent, "Accept-Language": "tr,en"}
         son_hata: Exception | None = None
@@ -165,6 +217,8 @@ class Çekici:
                 self._geri_cekil(deneme, yanit_basliklari.get("Retry-After"))
                 continue
 
+            # Kalıcı hata: yeniden denemek anlamsız, negatif önbelleğe yaz.
+            self.onbellek.negatif_yaz(url, durum)
             raise ÇekimHatası(f"HTTP {durum}: {url}")
 
         raise ÇekimHatası(

@@ -4,6 +4,8 @@
     python -m katilim.cli dok     thy.html      # tanı: tabloları imzalarıyla dök
     python -m katilim.cli json    thy.html      # yapılandırılmış çıktı
     python -m katilim.cli toplu   ./html_klasoru --csv panel.csv
+    python -m katilim.cli evren --yenile         # şirket evreni (1 istek)
+    python -m katilim.cli bildirimler            # KAFİF kimlikleri (Faz 1.2)
 
 `dogrula` çıkışı, self-check geçmezse sıfırdan farklıdır; toplu işlerde
 karantina mantığını buna bağlayabilirsiniz.
@@ -208,6 +210,96 @@ def cmd_evren(args) -> int:
     return 1 if (rapor.slug_bulunamayan or rapor.domda_olup_rscde_olmayan) else 0
 
 
+def cmd_bildirimler(args) -> int:
+    """Faz 1.2 — muaf olmayan her tüzel kişi için KAFİF kimliklerini topla.
+
+    Form İNDİRMEZ; yalnız kimlik listesi çıkarır. Sorgu ekseni uuid,
+    çıktı ekseni ticker.
+    """
+    from . import bildirim
+    from .cekici import BütçeAşıldı, HızSınırlayıcı, Çekici
+
+    sirketler = evren.oku(args.evren_csv)
+    if not sirketler:
+        print(f"{args.evren_csv} yok. Önce: python -m katilim.cli evren --yenile",
+              file=sys.stderr)
+        return 2
+
+    cekici = Çekici(
+        args.onbellek,
+        sinirlayici=HızSınırlayıcı(
+            min_aralik=args.aralik, jitter=1.0, oturum_butcesi=args.butce
+        ),
+    )
+
+    # 1) DG filtresi doğrulaması. Filtre KAFİF kaybettiriyorsa tam tarama
+    #    koşulmaz — bu bir karar noktası, kod içinden çözülmez.
+    if args.dg_ornek:
+        print(f"DG doğrulaması: {args.dg_ornek} şirkette filtreli/filtresiz karşılaştırma…")
+        try:
+            dg = bildirim.dg_dogrula(sirketler, cekici, ornek=args.dg_ornek)
+        except BütçeAşıldı as e:
+            print(f"BÜTÇE: {e}", file=sys.stderr)
+            return 2
+        for s in dg["satirlar"]:
+            print(f"  {s['ticker']:14s} DG {s['dg_kayit']:3d} kayıt / {s['dg_kafif']} KAFİF"
+                  f"   filtresiz {s['filtresiz_kayit']:3d} / {s['filtresiz_kafif']}"
+                  f"   {'DG DIŞI: ' + str(s['dg_disinda_kafif']) if s['dg_disinda_kafif'] else 'tam'}")
+        for s in dg["hata"]:
+            print(f"  {s['ticker']:14s} HATA {s['hata']}", file=sys.stderr)
+        if not dg["guvenli"]:
+            print("\nDG FİLTRESİ KAFİF KAYBETTİRİYOR — tam tarama koşulmadı.",
+                  file=sys.stderr)
+            print("Filtreyi bırakma kararı size ait (plan 1.2, karar noktası).",
+                  file=sys.stderr)
+            return 2
+        print(f"  -> DG filtresi {dg['ornek']} şirkette KAFİF kaybettirmedi.\n")
+
+    # 2) Tam tarama.
+    def ilerleme(sira, toplam, durum):
+        if sira % args.her == 0 or sira == toplam:
+            print(f"  [{sira:4d}/{toplam}] {'/'.join(durum.tickerlar):14s} "
+                  f"{durum.durum:16s} kafif={durum.kafif_sayisi} "
+                  f"(istek: {cekici.istatistik['ag']})", flush=True)
+
+    def kontrol_noktasi(t):
+        bildirim.yaz(bildirim.indirilenleri_koru(t.satirlar, args.csv), args.csv)
+        bildirim.durumlari_yaz(t.durumlar, args.durum_csv)
+
+    kesildi = None
+    try:
+        toplama = bildirim.gecmisi_topla(
+            sirketler, cekici, ilerleme=ilerleme, kontrol_noktasi=kontrol_noktasi
+        )
+    except BütçeAşıldı as e:
+        # Bütçe bir arıza değil, karar noktası: o ana kadarki iş korunur.
+        kesildi = str(e)
+        print(f"\nBÜTÇE AŞILDI: {e}", file=sys.stderr)
+        return 2
+
+    bildirim.yaz(bildirim.indirilenleri_koru(toplama.satirlar, args.csv), args.csv)
+    bildirim.durumlari_yaz(toplama.durumlar, args.durum_csv)
+    o = bildirim.ozet(toplama)
+
+    print(f"\nBİLDİRİM GEÇMİŞİ -> {args.csv}")
+    print(f"  tüzel kişi        : {o['tuzel_kisi']}  (sorgulanan {o['sorgulanan']})")
+    print(f"  durum dağılımı    : {o['durum_dagilimi']}")
+    print(f"  KAFİF/şirket      : {o['kafif_kova']}")
+    print(f"  ticker satırı     : {o['ticker_satiri']}")
+    print(f"  BENZERSİZ form    : {o['benzersiz_form']}   <- 1.4'ün indireceği")
+    print(f"  gönderim aralığı  : {o['en_eski']} .. {o['en_yeni']}")
+    print(f"  dönem dağılımı    : {o['donem_dagilimi']}")
+    print(f"  istek             : {cekici.istatistik}")
+    if toplama.uyarilar:
+        print(f"\nUYARI ({len(toplama.uyarilar)}):", file=sys.stderr)
+        for u in toplama.uyarilar[:20]:
+            print(f"  {u}", file=sys.stderr)
+
+    okunamayan = o["durum_dagilimi"].get(bildirim.DURUM_OKUNAMADI, 0)
+    hatali = o["durum_dagilimi"].get(bildirim.DURUM_CEKIM_HATASI, 0)
+    return 1 if (okunamayan or hatali or kesildi) else 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="katilim", description=__doc__)
     alt = p.add_subparsers(dest="komut", required=True)
@@ -229,6 +321,20 @@ def main(argv=None) -> int:
     sp.add_argument("--butce", type=int, default=5, help="oturum istek bütçesi")
     sp.add_argument("--zorla", action="store_true", help="önbelleği atla")
     sp.set_defaults(fn=cmd_evren)
+
+    sp = alt.add_parser("bildirimler")
+    sp.add_argument("--evren-csv", default=str(evren.EVREN_CSV))
+    sp.add_argument("--csv", default="veri/evren/bildirim_gecmisi.csv")
+    sp.add_argument("--durum-csv", default="veri/evren/sorgu_durumu.csv")
+    sp.add_argument("--onbellek", default="veri/onbellek")
+    sp.add_argument("--butce", type=int, default=800, help="oturum istek bütçesi")
+    # Yalnız YUKARI yönde oynatılır. Yavaşlamak nazik, hızlanmak değil.
+    sp.add_argument("--aralik", type=float, default=2.0,
+                    help="istekler arası asgari saniye (düşürmeyin)")
+    sp.add_argument("--dg-ornek", type=int, default=10,
+                    help="DG filtresi doğrulaması için şirket sayısı (0=atla)")
+    sp.add_argument("--her", type=int, default=25, help="kaç şirkette bir ilerleme bas")
+    sp.set_defaults(fn=cmd_bildirimler)
 
     args = p.parse_args(argv)
     return args.fn(args)

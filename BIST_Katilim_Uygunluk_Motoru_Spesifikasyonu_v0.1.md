@@ -78,7 +78,7 @@ bildirim_id         INTEGER PK    -- KAP bildirim no
 ticker              TEXT FK
 gonderim_ts         TIMESTAMP     -- 04.03.2026 18:57:54 formatı
 yil                 INTEGER
-periyot             TEXT          -- '6 Aylık' | 'Yıllık'
+periyot             TEXT          -- '6 Aylık' | 'Yıllık' | '3 Aylık' | '9 Aylık'
 finansal_tablo_nit  TEXT          -- 'Konsolide' | 'Solo'
 para_birimi_carpani INTEGER       -- 1.000.000 TL → 1000000
 is_duzeltme         BOOLEAN
@@ -103,6 +103,16 @@ b4_5  finans_sektoru_gayri_katilim
 b4_6  yayincilik
 b4_7  otel_turizm_eglence
 ```
+> **`periyot` alanı ölçümle genişletildi (Faz 1.2, 07.08.2026).** İlk yazımda
+> `'6 Aylık' | 'Yıllık'` deniyordu; 1.280 bildirimlik taramada `9 Aylık` (7)
+> ve `3 Aylık` (5) da gözlendi. Sebep özel hesap dönemleri — futbol kulüpleri
+> (FENER, GSRAY, BJKAS, TSPOR) 31 Mayıs kapanışı yüzünden "2024/Yıllık"
+> formunu Ağustos 2025'te veriyor.
+>
+> **Sonuç: panel kronolojisi dönem etiketine göre sıralanamaz.** Tolerans
+> durum makinesi (§2.1) dönemleri sırayla taşıdığı için sıralama
+> `gonderim_ts` üzerinden yapılmalı. Ayrıntı: `BILDIRIM_GECMISI_RAPORU.md` §4.
+
 Her bayrağın yanına, formda varsa `ilgili_esas_sozlesme_maddesi` metin alanı taşınır.
 
 ### 1.4 `kafif_kalem` (uzun format)

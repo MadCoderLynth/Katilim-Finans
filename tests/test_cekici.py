@@ -52,7 +52,9 @@ def test_onbellek_agi_atliyor():
         for _ in range(5):
             c.getir("https://kap.org.tr/tr/Bildirim/1")
         assert len(cagri) == 1, f"ağa {len(cagri)} kez çıkıldı, 1 bekleniyordu"
-        assert c.istatistik == {"onbellek": 4, "ag": 1, "yeniden_deneme": 0}
+        assert c.istatistik == {
+            "onbellek": 4, "ag": 1, "yeniden_deneme": 0, "negatif": 0,
+        }
 
 
 def test_429_geri_cekilme_ve_retry_after():
@@ -79,6 +81,52 @@ def test_404_yeniden_denenmiyor():
             assert len(cagri) == 1, "kalıcı hatada yeniden denenmemeli"
             return
         raise AssertionError("hata bekleniyordu")
+
+
+def test_negatif_onbellek_404u_tekrar_sormaz():
+    """404 de önbelleklenir; yoksa muaf/beyansız şirketler her koşuda yeniden
+    sorgulanır (Faz 1.2, üçüncü zorunlu davranış)."""
+    with tempfile.TemporaryDirectory() as d:
+        cagri = []
+        def sahte(url, b):
+            cagri.append(url); return 404, "", {}
+        for _ in range(3):
+            hs, _ = _sinirlayici()
+            c = Çekici(d, sinirlayici=hs, getir_fn=sahte)
+            try:
+                c.getir("https://x/yok")
+            except ÇekimHatası:
+                pass
+        assert len(cagri) == 1, f"ağa {len(cagri)} kez çıkıldı, 1 bekleniyordu"
+        assert c.istatistik["negatif"] == 1
+
+
+def test_negatif_onbellek_zorla_ile_atlanir():
+    with tempfile.TemporaryDirectory() as d:
+        cagri = []
+        def sahte(url, b):
+            cagri.append(url); return 404, "", {}
+        hs, _ = _sinirlayici()
+        c = Çekici(d, sinirlayici=hs, getir_fn=sahte)
+        for zorla in (False, True):
+            try:
+                c.getir("https://x/yok", zorla=zorla)
+            except ÇekimHatası:
+                pass
+        assert len(cagri) == 2, "zorla, negatif önbelleği atlamalı"
+
+
+def test_negatif_onbellek_gecici_hatayi_zehirlemez():
+    """429/5xx geçicidir; negatif önbelleğe YAZILMAZ, yoksa bir kesinti
+    kalıcı 'bu şirkette bildirim yok' kaydına dönüşür."""
+    with tempfile.TemporaryDirectory() as d:
+        durumlar = [(503, {}), (200, {})]
+        def sahte(url, b):
+            k, h = durumlar.pop(0); return k, "<html>ok</html>", h
+        hs, _ = _sinirlayici()
+        c = Çekici(d, sinirlayici=hs, getir_fn=sahte)
+        assert c.getir("https://x/1") == "<html>ok</html>"
+        assert c.onbellek.negatif_durum("https://x/1") is None
 
 
 if __name__ == "__main__":

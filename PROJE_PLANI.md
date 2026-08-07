@@ -6,8 +6,9 @@ Bu belge, her fazın Claude Code'a verilecek promptlarını içerir. Kaynaklar:
 
 **Durum (7 Ağu 2026):** Faz 0 ✔ (THY 2025/Yıllık, self-check GEÇTİ) ·
 1.0 rota keşfi ✔ · 1.1 evren ✔ (795 ticker / 746 tüzel kişi) ·
-**2.0 derinlik keşfi ✔ — sonuç BULUNAMADI, pencere kayıyor.**
-59 test geçiyor. Sıradaki: **1.2 → 1.4a**, aralıksız.
+2.0 derinlik keşfi ✔ (BULUNAMADI, pencere kayıyor) ·
+**1.2 bildirim sorguları ✔ — 1.276 KAFİF kimliği toplandı.**
+84 test geçiyor. Sıradaki: **1.4a** (arşiv çekimi, 1.276 form).
 
 **1.1b ertelendi ve 1.3'ün kapısı yer değiştirdi (7 Ağu).** Şirket özet
 sayfaları kaymıyor, ne zaman çekilse aynı veriyi veriyor; KAFİF formları
@@ -19,6 +20,21 @@ alındı. Sıra: **1.2 → 1.4a (arşiv) → 1.3 (20/20) → 1.4b (panel) → 1.
 > 5→7 Ağustos arasında THY'nin 2025/6 Aylık KAFİF'i erişilemez oldu
 > (@DERINLIK_KESFI_RAPORU.md §2). 6 Aylık dalgası ağustos-eylülde
 > yayımlandığı için gecikilen her hafta o dalgadan bir dilim götürüyor.
+>
+> **1.2'nin ölçümü bunu yumuşattı (7 Ağu, n=1).** Kayan şey **keşif**:
+> pencereden düşen 1472632 bugün `/tr/Bildirim/{id}`'den indi, self-check
+> geçti (@BILDIRIM_GECMISI_RAPORU.md §5). Kimlik `bildirim_gecmisi.csv`'ye
+> yazıldıysa form sonra da inebiliyor — yani **asıl zaman duyarlı adım
+> 1.2'ydi ve bitti.** Bu, 1.4a'nın önüne 1.1b'yi almayı mümkün kılar ama
+> gözlem tek bildirime dayanıyor; sırayı değiştirmeden önce birkaç kimlikle
+> daha sınanmalı.
+>
+> **Karar (7 Ağu): sıra değişmiyor, 1.4a önce koşuyor.** Gerekçe maliyet
+> asimetrisi: 1.276 form ≈ 68 dakika, hipotez doğruysa bu 68 dakikanın
+> kaybı yok; hipotez yanlışsa 1.1b'yi öne almanın bedeli telafi edilemez.
+> Üstelik **1.4a koşusu hipotezi bedavaya sınıyor**: arşivde pencere dışı
+> kimlikler zaten var, hepsi inerse gözlem n=1'den n=1.276'ya çıkıyor.
+> Ayrı bir sonda yazmaya gerek yok, 1.4a raporunda bir bölüm yeter.
 
 Planın şeklini değiştiren bulgular:
 
@@ -279,10 +295,34 @@ sayısı düşmüş ve kalanlar gerekçeli.
 
 ---
 
-## 1.2 — Bildirim sorguları · bütçe **800**
+## 1.2 — Bildirim sorguları ✔ **BİTTİ (7 Ağu 2026)**
 
-> Eski 2.1 buraya taşındı. Pencere 1 yıl olduğu için "güncel" ve "geçmiş"
-> aynı istekten çıkıyor; ayrı faz tutmanın anlamı kalmadı.
+Çıktı: `BILDIRIM_GECMISI_RAPORU.md`, modüller `katilim/bildirim.py` +
+`katilim/rsc.py`. **651 istek / onaylı 800.** 643 tüzel kişi sorgulandı.
+
+```
+KAFIF_VAR 537 · KAFIF_YOK 101 · BOS_SONUC 5 · okunamayan 0 · hata 0
+ticker satırı 1.280  ·  BENZERSİZ form 1.276  <- 1.4'ün maliyeti
+```
+
+| Bulgu | Etkisi |
+|---|---|
+| Pencereden düşen bildirim `/tr/Bildirim/{id}`'den **hâlâ iniyor** (n=1) | Kayan pencere **keşfi** öldürüyor, erişimi değil → 1.4'ün aciliyeti düştü |
+| `periyot` alanı `3 Aylık`/`9 Aylık` da içeriyor | Panel kronolojisi `gonderim_ts` ile sıralanmalı; spec §1.2 güncellendi |
+| 163 tekrar eden (ticker, yıl, periyot), 135 şirkette | RSC `isChanged` = `DUZENLENEN`/`DUZELTILEN` → 2.3'ün gerçek kaynağı |
+| DG filtresi 10 şirkette daha doğrulandı (n=12) | Filtre korunuyor |
+| 33 belirsiz muafiyetin **hepsi** KAFİF vermemiş | 1.1b'ye girdi; ama muaf ≠ beyansız, 1.4'te `AYIRT_EDILEMEDI` |
+| İki sessiz veri kaybı hatası (RSC kaçış + parantez konumu) | `katilim/rsc.py` açıldı, 7 regresyon testi; evren çıktısı değişmedi |
+
+**Sıra kısıtı gevşedi.** "1.2 biter bitmez 1.4a, araya 1.1b sokma" kuralı,
+kimliklerin kaydedilmesiyle zorunluluk olmaktan çıktı — kimlik elde
+olduğu sürece form sonra da inebiliyor. Yalnız bu gözlem **n=1**; 1.1b'yi
+araya almadan önce birkaç kimlikle daha sınanmalı.
+
+*1.2 promptu arşiv olarak duruyor.*
+
+<details>
+<summary>1.2 promptu (arşiv)</summary>
 
 ```
 Görev: Her tüzel kişi için KAFİF bildirim kimliklerini topla.
@@ -332,8 +372,11 @@ en yeni gonderim_ts, KAFİF'i hiç olmayan şirket sayısı, 1.4 için gereken
 form sayısı ve istek karşılığı.
 ```
 
-**Çıkış kriteri:** `bildirim_gecmisi.csv` dolu; DG filtresi 10 şirkette
-doğrulanmış; hata ile boş sonuç kodda ayrı; 1.4'ün gerçek maliyeti ölçülmüş.
+**Çıkış kriteri:** ✔ karşılandı — `bildirim_gecmisi.csv` 1.280 satır; DG
+filtresi 10 şirkette doğrulandı; üç durum (dolu / boş / okunamadı) kodda ve
+`sorgu_durumu.csv`'de ayrı; 1.4'ün maliyeti **1.276 istek** olarak ölçüldü.
+
+</details>
 
 ---
 
@@ -414,8 +457,18 @@ Yeni modül: katilim/toplayici.py
 
 ÖNCE DUMAN TESTİ: 20 şirketle koş, arşivi gözle doğrula (dosya sayısı,
 boyut dağılımı, rastgele birini `dogrula` ile aç). Çekim döngüsünde hata
-varsa 2.250 isteği ondan sonra at. Bu 1.3 değil — parser kapısı değil,
+varsa kalan isteği ondan sonra at. Bu 1.3 değil — parser kapısı değil,
 indirme döngüsünün duman testi.
+
+AYRICA ÖLÇ — "pencere keşfi öldürüyor, erişimi değil" hipotezi:
+1.2'de n=1 gözlendi (1472632 pencereden düşmüştü, /tr/Bildirim/{id}'den
+indi). Bu koşu hipotezi bedavaya n=1.276'ya çıkarıyor. Raporda ayrı bir
+bölüm aç: pencere dışı kimliklerden kaçı indi, kaçı 404 verdi.
+- Hepsi iniyorsa: arşiv kimliklerden yeniden kurulabilir demektir; bu,
+  yedekleme ve yeniden çekme politikasını değiştirir (bana söyle).
+- 404 çıkanlar varsa: erişimin de bir ufku var. En eski erişilebilen
+  gonderim_ts'i raporla — asıl sınır o.
+Bu ölçüm ek istek gerektirmiyor, zaten indirilecek kimlikler.
 
 ARŞİV KURALI: veri/ham/ ve veri/onbellek/ artık önbellek değil, tek
 kopyası olan arşiv. Temizleme komutu YAZMA, --zorla ile toplu yeniden
@@ -669,9 +722,16 @@ katilim/toplayici.py'ye ekle:
 - Bir beyanın HAYIR'dan EVET'e (veya tersi) döndüğü düzeltme özellikle
   işaretlensin; bu, uygunluk kararını doğrudan çevirir.
 
-is_duzeltme tespiti şu an sayfa metninde "düzeltme" araması yapıyor ve
-hiç doğrulanmadı (OKUBENI.md bilinen açıklar). 1.3'te bulduğun gerçek
-düzeltme bildirimiyle bu tespiti doğrula veya düzelt.
+METİN ARAMASI YAPMA. `is_duzeltme` şu an sayfa metninde "düzeltme"
+arıyor ve hiç doğrulanmadı (OKUBENI.md bilinen açıklar). 1.2 gerçek
+kaynağı buldu: RSC yükündeki `isChanged` alanı `DUZENLENEN` /
+`DUZELTILEN` değerlerini **yapılandırılmış** taşıyor. Metin araması
+sil, bu alana bağlan.
+
+Bilinen hacim (1.2 ölçümü): 163 tekrar eden (ticker, yıl, periyot)
+grubu, 135 şirkette. `DUZENLENEN` ile `DUZELTILEN` arasındaki fark
+belgelenmemiş — ikisini ayrı taşı, birleştirme; anlamları netleşince
+karar veririz.
 
 Look-ahead disiplini (spec §5.1): düzeltilmiş kaydın geçerlilik başlangıcı
 DÜZELTMENİN gonderim_ts'i, orijinalinki değil. Panelde her ikisi de
@@ -697,6 +757,24 @@ Görev: seri_degerlendir()'i tarihsel panele uygula.
 
 karar.py'de seri_degerlendir() var ve şirket bazında tolerans taşıyor (H4).
 Şimdi gerçek tarihsel veriye bağlanacak.
+
+ÖNCE BİR HATA DÜZELT — karar.py:187 sıralaması bozuk:
+
+    key=(yil, 0 if periyot == "6 Aylık" else 1, gonderim_ts)
+
+1.2 ölçtü ki periyot yalnız 6 Aylık/Yıllık değil: `9 Aylık` (7 kayıt) ve
+`3 Aylık` (5 kayıt) da var. Bu anahtarda üçü de aynı kovaya (1) düşüyor,
+yani Mayıs'ta verilen bir 3 Aylık, Ağustos'ta verilen 6 Aylık'tan SONRA
+sıralanıyor. Tolerans durum makinesi bu sırayı yürüdüğü için yanlış sıra
+doğrudan yanlış karar üretir.
+
+Düzeltme: **yalnız `gonderim_ts` ile sırala.** Dönem etiketi kronoloji
+taşımıyor — futbol kulüpleri 31 Mayıs kapanışı yüzünden "2024/Yıllık"ı
+Ağustos 2025'te veriyor. Spec §5.1 zaten geçerlilik anını gonderim_ts'e
+bağlıyor; sıralama da aynı alana bağlanmalı.
+
+Testi de yaz: 3 Aylık / 6 Aylık / 9 Aylık / Yıllık karışık bir seri kur,
+gonderim_ts sırasının korunduğunu doğrula.
 
 Yeni modül: katilim/panel.py
 - panel_uret(kayitlar, evren) -> her (ticker, yıl, periyot) için

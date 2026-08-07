@@ -12,7 +12,8 @@ Detaylar: @BIST_Katilim_Uygunluk_Motoru_Spesifikasyonu_v0.1.md ve @OKUBENI.md
 
 ```bash
 python3 tests/test_motor.py                              # 22 test, pytest gerektirmez
-python3 tests/test_cekici.py                             # 6 test, çekim katmanı (ağa çıkmaz)
+python3 tests/test_cekici.py                             # 9 test, çekim katmanı (ağa çıkmaz)
+python3 -m katilim.cli bildirimler --butce 800            # KAFİF kimlikleri (Faz 1.2)
 python3 -m katilim.cli dogrula veri/ham/DOSYA.html        # ayrıştır + self-check + karar
 python3 -m katilim.cli dok veri/ham/DOSYA.html            # tanı: tabloları imzalarıyla dök
 python3 -m katilim.cli toplu veri/ham --csv veri/panel/panel.csv
@@ -62,6 +63,15 @@ Test kırıldığında **kuralı değil kodu düzeltin.**
    Bu, kural 2'nin (eksik beyan ≠ hayır beyanı) toplama katmanındaki karşılığı:
    her ikisinde de eksik veri, temiz veri gibi görünerek geçiyor.
 
+## Bilinen hata — düzeltilmedi
+
+**`karar.py:187` sıralama anahtarı bozuk.** `(yil, 0 if periyot ==
+"6 Aylık" else 1, gonderim_ts)` — 1.2 ölçtü ki `3 Aylık` ve `9 Aylık` da
+var, üçü aynı kovaya düşüyor. Tolerans durum makinesi bu sırayı yürüdüğü
+için yanlış sıra doğrudan yanlış karar üretir. Düzeltme: yalnız
+`gonderim_ts` ile sırala (dönem etiketi kronoloji taşımıyor — futbol
+kulüpleri "2024/Yıllık"ı Ağustos 2025'te veriyor). Plan adımı 3.1.
+
 ## Doğrulanmamış varsayımlar
 
 Karar motorunda kural olarak kodlu ama **kanıtlanmamış** (spec §2.3):
@@ -93,11 +103,13 @@ onunla çelişirse plan değil bu dosya esastır.
 
 ### Nerede kaldık (7 Ağu 2026)
 
-Biten: **Faz 0** · **1.0** rota keşfi · **1.1** evren · **2.0** derinlik keşfi.
-Testler: 59 geçiyor (22 motor + 6 çekici + 23 evren + 8 derinlik).
+Biten: **Faz 0** · **1.0** rota keşfi · **1.1** evren · **2.0** derinlik
+keşfi · **1.2** bildirim sorguları.
+Testler: 84 geçiyor (22 motor + 9 çekici + 23 evren + 8 derinlik +
+15 bildirim + 7 rsc).
 
-Sıradaki: **1.2 → 1.4a, aralıksız.** Bu ikisinin arasına başka adım
-sokulmaz — pencere 1 gün/gün kayıyor.
+Sıradaki: **1.4a** — `bildirim_gecmisi.csv`'deki **1.276 benzersiz formu**
+indir ve arşivle. Ayrıntı: @BILDIRIM_GECMISI_RAPORU.md.
 
 **Sıra 7 Ağustos'ta değişti; iki kural yer değiştirdi:**
 
@@ -110,7 +122,45 @@ sokulmaz — pencere 1 gün/gün kayıyor.
    kaçırılan bildirim düzelmez.
 
 Zaman duyarlı olmayan her şey arşivin arkasına alındı:
-**1.2 → 1.4a → 1.3 → 1.4b → 1.1b → 2.0b → 4.0.**
+**1.2 ✔ → 1.4a → 1.3 → 1.4b → 1.1b → 2.0b → 4.0.**
+
+**Faz 1.2 bitti — ve zaman duyarlılığının yerini değiştirdi.**
+@BILDIRIM_GECMISI_RAPORU.md (651 istek / onaylı 800).
+
+- **Kayan pencere KEŞFİ öldürüyor, ERİŞİMİ değil (n=1).** Pencereden düşmüş
+  1472632, `/tr/Bildirim/{id}`'den bugün indi: 200, 13/13 beyan, self-check
+  GEÇTİ. Kimlik `veri/evren/bildirim_gecmisi.csv`'ye yazıldıysa form sonra
+  da inebiliyor. Yani **asıl zaman duyarlı adım 1.2'ydi.** Düzenli 1.2
+  koşusu artık en kritik bakım işi. *Gözlem tek bildirime dayanıyor;*
+  1.4a'yı ertelemek için gerekçe sayılmadan birkaç kimlikle daha sınanmalı.
+- **1.276 benzersiz form** (2.0'ın tahmini ~1.500'dü) → 1.4 maliyeti
+  ~1.276 istek, ~68 dk, onaylı 2.600'ün %49'u.
+- **`periyot` yalnız 6 Aylık/Yıllık değil:** `9 Aylık` (7) ve `3 Aylık` (5)
+  de var; futbol kulüpleri 31 Mayıs kapanışı yüzünden "2024/Yıllık"ı Ağustos
+  2025'te veriyor. **Panel kronolojisi dönem etiketiyle değil `gonderim_ts`
+  ile sıralanır.** Spec §1.2 aynı commit'te güncellendi.
+- **Düzeltme sinyali bulundu:** RSC'deki `isChanged` alanı `DUZENLENEN` /
+  `DUZELTILEN` değerlerini taşıyor. 163 tekrar eden (ticker, yıl, periyot)
+  grubu var, 135 şirkette. OKUBENI'deki "is_duzeltme doğrulanmadı" açığının
+  gerçek kaynağı bu — 2.3 metin araması yapmasın.
+- **`disclosureClass=DG` artık n=12'de doğrulandı**, KAFİF kaybettirmiyor.
+- **33 belirsiz muafiyetin hepsi KAFİF vermemiş.** Tutarlı ama kanıt değil:
+  muaf olan da beyansız olan da vermez. 1.4'te `AYIRT_EDILEMEDI`, `MUAF` değil.
+
+**Negatif önbellek eklendi** (`veri/onbellek/negatif.tsv`): kalıcı hata (404)
+bir kez alınır. **Geçici hata (429/5xx/bağlantı) YAZILMAZ** — 1.2'nin ilk
+geçişinde 55 şirket geçici olarak alınamadı, ikinci geçişte hepsi geldi;
+geçici hata negatif önbelleğe yazılsaydı o 55 şirket panelden sessizce
+düşerdi.
+
+**`katilim/rsc.py` açıldı — iki sessiz veri kaybı hatası burada kapatıldı.**
+RSC yükü JS dize literalidir; `replace('\"','"')` ile çözmek JSON'un kendi
+kaçışlarını bozuyor ve **özetinde tırnak geçen bildirimler sessizce
+düşüyordu**. İkinci hata düzeltmenin kendisindeydi: açılış parantezi
+eşleşmenin sonundan aranınca `{"alan":` kalıbı iç nesneyi buluyor (746
+şirketin 30'u kayboldu). İkisi de kendi denetimlerine yakalandı —
+`Ayiklama.bozuk` sayacı ve evren çıktısının satır satır karşılaştırılması.
+**Yeni ayrıştırıcı yazarken bu iki tuzağı varsayın.**
 
 **Faz 2.0 bitti — pencere genişletilemiyor ve KAYIYOR.** Ayrıntı:
 @DERINLIK_KESFI_RAPORU.md (betik: `arac/derinlik_kesfi.py`, 22 istek).
