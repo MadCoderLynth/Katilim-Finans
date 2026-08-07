@@ -4,10 +4,21 @@ Bu belge, her fazın Claude Code'a verilecek promptlarını içerir. Kaynaklar:
 `CLAUDE.md` (değiştirilemez kurallar), spec v0.1 (§4 faz tanımları),
 `DEVIR_NOTU_2026-08-05.md` (alan bulguları ve teknik durum).
 
-**Durum (6 Ağu 2026):** Faz 0 ✔ (THY 2025/Yıllık, self-check GEÇTİ) ·
-1.0 rota keşfi ✔ · 1.1 evren ✔ (795 ticker / 746 tüzel kişi).
-51 test geçiyor. Sıradaki: **2.0** ve **1.1b** — ikisi bağımsız, sırası
-önemsiz; 1.2'nin kodu yazılmadan ikisi de bitmiş olmalı.
+**Durum (7 Ağu 2026):** Faz 0 ✔ (THY 2025/Yıllık, self-check GEÇTİ) ·
+1.0 rota keşfi ✔ · 1.1 evren ✔ (795 ticker / 746 tüzel kişi) ·
+**2.0 derinlik keşfi ✔ — sonuç BULUNAMADI, pencere kayıyor.**
+59 test geçiyor. Sıradaki: **1.2 → 1.4a**, aralıksız.
+
+**1.1b ertelendi ve 1.3'ün kapısı yer değiştirdi (7 Ağu).** Şirket özet
+sayfaları kaymıyor, ne zaman çekilse aynı veriyi veriyor; KAFİF formları
+kayıyor. Bu yüzden zaman duyarlı olmayan her şey arşiv çekiminin arkasına
+alındı. Sıra: **1.2 → 1.4a (arşiv) → 1.3 (20/20) → 1.4b (panel) → 1.1b →
+2.0b → 4.0**.
+
+> **1.4 artık zaman duyarlı ve bu ölçüldü.** Pencere 1 gün/gün kayıyor;
+> 5→7 Ağustos arasında THY'nin 2025/6 Aylık KAFİF'i erişilemez oldu
+> (@DERINLIK_KESFI_RAPORU.md §2). 6 Aylık dalgası ağustos-eylülde
+> yayımlandığı için gecikilen her hafta o dalgadan bir dilim götürüyor.
 
 Planın şeklini değiştiren bulgular:
 
@@ -18,6 +29,7 @@ Planın şeklini değiştiren bulgular:
 | 1.0 | Faz 2 bloke; önüne 2.0 derinlik keşfi eklendi |
 | 1.1 | Evren 795 ticker / 746 tüzel kişi — sorgu ekseni uuid, panel ekseni ticker |
 | 1.1 | Pazar sondası endeks üyeliğini de buldu → 1.1b ve 4.0 açıldı |
+| 2.0 | Pencere genişletilemiyor → 2.1 atlandı; pencere kayıyor → 1.4 acil |
 
 ---
 
@@ -281,13 +293,21 @@ istek ve aynı bildirimin iki kaydı demek. Muaf olmayan uuid'ler üzerinden
 döngü kur, sonucu ticker'lara sonradan dağıt.
 
 Rota: /tr/bildirim-sorgu-sonuc?member={mkkMemberOid}&disclosureClass=DG
-bildirim_id, satırın checkbox id niteliğinde (<input name="notification-
-checkbox" id="1643242">). /tr/Bildirim/{id} linki YOK, onu arama.
-KAFİF satırı: konu metni "Katılım Finansı İlkeleri Bilgi Formu";
-Yıl ve Periyot ayrı sütunlarda.
+
+Kaynak DOM DEĞİL, RSC yükü. 2.0'da ölçüldü: `disclosureBasic` nesnesi
+disclosureIndex, publishDate, disclosureClass, year, period, title
+alanlarını yapılandırılmış veriyor. Checkbox kazımaya (id niteliği)
+gerek yok — o yol yedek katman olarak kalsın, birincil değil.
+KAFİF satırı: title "Katılım Finansı İlkeleri Bilgi Formu".
+
+Sayfalama döngüsü YAZMA. 2.0 ölçtü: sunucu bulduğu kaydın tamamını tek
+sayfada basıyor (92=92), page/offset/size parametreleri yok sayılıyor.
 
 Bu adım HTML formu İNDİRMEZ, yalnız kimlik listesi çıkarır. Sebep: kaç
 form indireceğimizi bilmeden 1.4'ün bütçesini konuşamayız.
+
+ZAMAN DUYARLI — GECİKTİRME. Pencere 1 gün/gün kayıyor (2.0 sonda 0).
+Bu adım bittiği anda 1.4a başlamalı; araya 1.1b veya 1.3 sokma.
 
 ÜÇ ZORUNLU DAVRANIŞ:
 
@@ -317,15 +337,23 @@ doğrulanmış; hata ile boş sonuç kodda ayrı; 1.4'ün gerçek maliyeti ölç
 
 ---
 
-## 1.3 — 20/20 parser kapısı · bütçe **30**
+## 1.3 — 20/20 parser kapısı · **ağ isteği yok** · 1.4a'dan SONRA
 
-> Faz 0'ın devredilen çıkış kriteri. Bu kapı geçilmeden 1.4 koşulmaz;
-> 2.600 isteği doğrulanmamış bir parser'a harcamak pahalı bir hata olur.
+> **Kapı yeri değişti (7 Ağu 2026).** Önce "1.3 geçmeden 1.4 koşulmaz"
+> yazıyordu, gerekçe "2.600 isteği doğrulanmamış parser'a harcamak pahalı".
+> **O gerekçe yanlıştı:** çekim parser'ı hiç kullanmıyor, HTML `bildirim_id`
+> ile arşivleniyor ve ayrıştırma sonradan tekrar tekrar yapılabiliyor
+> (kural 6 zaten bunun için var). Parser yanlış çıkarsa tek istek bile
+> boşa gitmez; ama beklenen her gün pencereden bir gün siliyor.
+>
+> 1.3 artık **1.4b'yi (panel üretimi) kapılıyor**, çekimi değil. Örneklem
+> 1.4a'nın arşivinden seçilir, ağa çıkmaz.
 
 ```
-Görev: Parser'ı 20 farklı gerçek bildirimde doğrula.
+Görev: Parser'ı arşivdeki 20 farklı gerçek bildirimde doğrula.
 
-Örneklem 1.2'nin çıktısından seçilir ve kolay olanı değil zoru kapsar:
+Örneklem 1.4a'nın indirdiği arşivden seçilir; ağa çıkma, diskten oku.
+Kolay olanı değil zoru kapsa:
 - en az 3 solo (konsolide olmayan) finansal tablo
 - en az 3 farklı sektör (sanayi, GYO, perakende)
 - en az 2 küçük şirket (kalem sayısı az, tablolar kısmen boş)
@@ -337,7 +365,7 @@ NOT: 2024 öncesi dönem bu pencereden çekilemiyor. Eski şablon (CLAUDE.md
 kural 4'teki 3 soru -> 2 soru değişikliği) bu turda sınanamaz; kapsam
 dışı olduğunu rapora yaz, "sınandı" sayma.
 
-Her bildirim için: indir (önbellek öncelikli) -> veri/ham/ -> dogrula.
+Her bildirim için: arşivden oku -> dogrula.
 
 Kalıcı çıktı: tests/fixtures/pilot/ altına ayrıştırılmış JSON + beklenen
 üç oran. tests/test_pilot.py bunları ağa çıkmadan regresyon olarak koşar.
@@ -356,49 +384,81 @@ gerekçe yazılı ve karantinada. `tests/test_pilot.py` yeşil.
 
 ---
 
-## 1.4 — Tam evren form çekimi · bütçe **2.600**
+## 1.4a — Arşiv çekimi · bütçe **2.250** · **ZAMAN DUYARLI**
 
-> **Zaman duyarlı.** Sorgu penceresi kayıyor: bugün erişilebilen en eski
-> bildirim yarın erişilemez. Bu adım ertelendikçe panel derinliği kalıcı
-> olarak kaybediliyor.
+> Projenin en aciliyetli adımı. Pencere 1 gün/gün kayıyor ve 6 Aylık
+> dalgası ağustos–eylülde yayımlanıyor; dalganın başı zaten düştü
+> (1472632, THY 2025/6 Aylık — 5 Ağustos'ta vardı, 7 Ağustos'ta yok).
+> Geciken her hafta o dalgadan bir dilim kalıcı olarak gidiyor.
 
 ```
-Görev: 1 yıllık pencerede bulunan TÜM KAFİF formlarını indir ve panele bas.
+Görev: 1.2'nin listelediği TÜM KAFİF formlarını indir ve arşivle.
 
-Ön koşul: 1.3 geçti (20/20). Geçmediyse başlama.
+BU ADIM AYRIŞTIRMAZ. Tek işi HTML'i diske almak. Parser'a hiç
+dokunmuyor, dolayısıyla 1.3'ü beklemesi gerekmiyor: yanlış ayrıştırma
+sonradan düzeltilir, kaçırılan bildirim düzeltilemez.
 
-Kapsam kararı verildi: en güncel form değil, PENCEREDEKİ HER ŞEY.
-Gerekçe: Faz 2 bloke; bu pencere şu an sahip olabileceğimiz tüm tarih.
-Şirket başına ~2-3 form, ~2.600 istek, ~2 sa 20 dk.
+Ön koşul: 1.2 bitti. 1.3 ÖN KOŞUL DEĞİL.
+
+Kapsam: pencerede ne varsa hepsi. ~2.250 istek (2.0 sonrası aşağı çekildi:
+şirket başına ~3 değil ~2 KAFİF görünüyor), ~2 saat.
 
 Yeni modül: katilim/toplayici.py
-- formlari_topla(bildirim_gecmisi, cekici) -> list[KafifBildirim]
-- İdempotanlık bildirim_id üzerinden (sha256 ÜZERİNDEN DEĞİL — markup
-  istekten isteğe değişiyor, rota keşfi §4)
-- KAFİF'i olmayan şirket sessizce atlanmaz: durum='BEYAN_YOK'.
-  Muaf olan ile beyan vermeyen ayrı kayıtlanır; ayırt edilemiyorsa
-  'AYIRT_EDILEMEDI' olarak işaretle, ikisinden birini varsayma.
-- Ticker artık dosya adından tahmin edilmiyor, evren tablosundan geliyor
+- formlari_indir(bildirim_gecmisi, cekici) -> indirme raporu
+- Tek sabit pencere toplayıcısı. SAYFALAMA DÖNGÜSÜ YAZMA (2.0: 92=92).
+- İdempotanlık bildirim_id üzerinden (sha256 ile DEĞİL)
+- Dosya adı: veri/ham/{TICKER}_{YIL}_{PERIYOT}_{bildirim_id}.html
+- KAFİF'i olmayan şirket sessizce atlanmaz: 'BEYAN_YOK'. Muaf olan ile
+  beyan vermeyen ayrı kayıtlanır; ayırt edilemiyorsa 'AYIRT_EDILEMEDI',
+  ikisinden birini varsayma.
+
+ÖNCE DUMAN TESTİ: 20 şirketle koş, arşivi gözle doğrula (dosya sayısı,
+boyut dağılımı, rastgele birini `dogrula` ile aç). Çekim döngüsünde hata
+varsa 2.250 isteği ondan sonra at. Bu 1.3 değil — parser kapısı değil,
+indirme döngüsünün duman testi.
+
+ARŞİV KURALI: veri/ham/ ve veri/onbellek/ artık önbellek değil, tek
+kopyası olan arşiv. Temizleme komutu YAZMA, --zorla ile toplu yeniden
+çekme YAPMA. (2.0'da olduğu gibi tekil --zorla ölçüm için serbest, ama
+önce eski kopyayı veri/onbellek/arsiv/ altına tarihiyle al.)
+
+Uzun koşu disiplini: ilerlemeyi her 50 istekte diske yaz; koşu kesilirse
+kaldığı yerden devam etsin.
+
+Çıktı: INDIRME_RAPORU.md — kaç form, kaç BEYAN_YOK, kaç hata, harcanan
+istek, en eski ve en yeni gonderim_ts (pencerenin fiili genişliği).
+```
+
+**Çıkış kriteri:** `bildirim_gecmisi.csv`'deki her KAFİF satırının karşılığı
+diskte var veya hata gerekçesi yazılı. Arşiv bütünlüğü doğrulanmış.
+
+---
+
+## 1.4b — Ayrıştırma ve panel · **ağ isteği yok**
+
+```
+Görev: 1.4a'nın arşivini ayrıştır, snapshot panelini üret.
+
+Ön koşul: 1.3 geçti (20/20). Bu kapı BURADA duruyor — panel, doğrulanmamış
+parser'ın çıktısıyla yayımlanmaz.
+
+Ağa çıkmaz; her şey diskten. Yanlış çıkarsa düzelt ve yeniden koş,
+maliyeti sıfır.
+
+- ayristir_arsiv(veri/ham) -> list[KafifBildirim]
+- Ticker dosya adından tahmin edilmiyor, evren tablosundan geliyor
   (OKUBENI.md "bilinen açıklar" maddesi kapanır)
-
-ARŞİV KURALI: veri/ham/ ve veri/onbellek/ bu adımdan sonra bir önbellek
-değil, tek kopyası olan tarihsel arşivdir. Temizleme komutu YAZMA,
---zorla ile toplu yeniden çekme YAPMA.
-
-Uzun koşu disiplini: ilerlemeyi her 50 istekte diske yaz. Koşu yarıda
-kesilirse kaldığı yerden devam etsin, baştan başlamasın.
+- Self-check kalan kayıt karantinaya; TOLERANS gevşetilmez
 
 Çıktı:
 - veri/panel/snapshot_{YYYYMMDD}.csv — ticker, yıl, periyot, üç oran,
   karar, red kodları, self-check, bildirim_id, gonderim_ts
 - TOPLAMA_RAPORU.md — şirket/bildirim sayıları, BEYAN_YOK, karantina,
-  harcanan istek, karar dağılımı, şablon imzası dağılımı
+  karar dağılımı, şablon imzası dağılımı
 ```
 
 **Çıkış kriteri:** Muaf olmayan her şirket için ya en az bir kayıt ya
 `BEYAN_YOK`/`AYIRT_EDILEMEDI` işareti var. Karantina oranı raporlanmış.
-Arşiv bütünlüğü: `bildirim_gecmisi.csv`'deki her `indirildi_mi=True` satırın
-karşılığı diskte mevcut.
 
 ---
 
@@ -407,15 +467,39 @@ karşılığı diskte mevcut.
 **Spec çıkış kriteri:** KAFİF başlangıcından bugüne panel dolu; şablon
 versiyonları ayrıştırılmış.
 
-> **Bu faz bloke (5 Ağu 2026).** KAP bildirim sorgusu 1 yıldan geriye
-> gitmiyor; `fromDate/toDate`, `year`, `startDate/endDate` üçü de yok
-> sayılıyor (rota keşfi §5). Faz 1.4 pencerenin tamamını topluyor — yani
-> Faz 2'nin görevi artık "geri doldurmak" değil, **pencereyi genişletecek
-> bir yol olup olmadığını sınamak.**
+> **Bu fazın "geri doldurma" ayağı kapandı (7 Ağu 2026).** 2.0 sistematik
+> olarak sınadı: KAP bildirim sorgusu 1 yıldan geriye gitmiyor ve pencere
+> 1 gün/gün kayıyor (@DERINLIK_KESFI_RAPORU.md). Faz 1.4 pencerenin
+> tamamını topluyor; **derinlik bundan sonra geri doldurmayla değil,
+> düzenli çekimle zamanla birikiyor.** Fazda geriye 2.2 (şablon
+> versiyonlama) ve 2.3 (düzeltme mantığı) kaldı; ikisi de 1.4'ün çıktısı
+> üstünde çalışır ve bloke değil.
 
-## 2.0 — Tarihsel derinlik keşfi · bütçe **30**
+## 2.0 — Tarihsel derinlik keşfi ✔ **BİTTİ (7 Ağu 2026)**
 
-> Ölçüm turu. Çıktısı kod değil, bir karar.
+Çıktı: `DERINLIK_KESFI_RAPORU.md`, betik `arac/derinlik_kesfi.py`.
+22 istek, bütçe 30'un en fazla 9'u tek koşuda kullanıldı, `BütçeAşıldı`
+tetiklenmedi.
+
+**Sonuç: BULUNAMADI.** Altı yol da denendi, pencere genişletilemedi.
+
+| Bulgu | Etkisi |
+|---|---|
+| Pencere **1 gün/gün kayıyor** (05-08-2025 → 07-08-2025) | 1.4 zaman duyarlı; THY 2025/6 Aylık zaten kayboldu |
+| `startDate`/`endDate` sunucuya **ulaşıyor ama atılıyor** | "isim bilmiyoruz" değil; rota tarih kabul etmiyor |
+| Sunucu sayısı = render edilen satır (92=92) | **sayfalama yok**; sınır kayıt değil tarih |
+| `/tr/kfif/` dönem seçici yok, geçmiş kimlik vermiyor | o yol da kapalı |
+| Özet sayfasında bildirim listesi yok | `/tr/sirket-bildirimleri/` tek kayıt basıyor |
+| `serverBaseUrl: kapsitebackend.mkk.com.tr` | tek keşfedilmemiş uç — **karar bekliyor** |
+| RSC'de `disclosureBasic` yapılandırılmış geliyor | 1.2 checkbox kazımasın |
+
+**Faz 2.1 koşulmaz** (koşulu sağlanmadı). Derinlik bundan sonra yalnız
+**zamanla birikir**: bugün başlarsak 1 yıl, düzenli çekersek her gün +1 gün.
+
+*Aşağıdaki 2.0 promptu arşiv olarak duruyor; yeniden koşulmaz.*
+
+<details>
+<summary>2.0 promptu (arşiv)</summary>
 
 ```
 Görev: 1 yıllık pencerenin ötesine geçen bir yol var mı, sistematik dene.
@@ -463,15 +547,59 @@ Sonra denenecekler — her biri için "kayıt sayısı ve en eski tarih değişt
   kapanır ve derinlik zamanla birikir.
 ```
 
-**Çıkış kriteri:** Altı yolun her biri denenmiş ve sonucu yazılı; "pencere
-genişletilebiliyor / genişletilemiyor" kararı verilmiş; kayma ölçülmüş.
+**Çıkış kriteri:** ✔ karşılandı — altı yol da denendi, karar "genişletilemiyor",
+kayma ölçüldü (1 gün/gün).
+
+</details>
 
 ---
 
-## 2.1 — Geri doldurma *(koşullu)*
+## 2.0b — Arka uç servisi sondası · bütçe **10** · **1.4a'dan SONRA**
 
-> **Yalnızca 2.0 bir yol bulduysa koşulur.** Bulunamadıysa bu adım atlanır,
-> 2.2'ye geçilir.
+> Sıralama kasıtlı: servis ~%30-40 ihtimalle Faz 2'yi açar, kayan pencere
+> ise kesin kaybettiriyor. Önce ölen veriyi yakala, sonra ölç.
+
+```
+Görev: kapsitebackend.mkk.com.tr uçlarını YALNIZCA ÖLÇ.
+
+Ön koşul: 1.4a bitti, arşiv diskte. Bu adım aciliyetli değil.
+
+Gerekçe (2.0'ın bıraktığı iz): 1 yıl sınırı formun kendi metnine göre bir
+ARALIK GENİŞLİĞİ sınırı — "Seçilen Tarih Aralığı 1 Yıldan Fazla Olamaz" —
+çapa sınırı değil. Ön yüz her zaman [bugün−1yıl, bugün] çapası kuruyor.
+Servis keyfi çapa kabul ediyorsa (örn. 2023-01-01 → 2023-12-31) Faz 2
+tümüyle açılır.
+
+ÖLÇMEK İLE KULLANMAK AYRI KARARLAR. Bu adım yalnız birincisi:
+- Uç yolunu bul: 2.0'da taranmayan 21 ortak JS parçasında ara. Tarama
+  ağ isteği değil, indirilmiş parçalarda metin araması.
+- Yol bulunursa EN FAZLA 10 istek: bir tanesi bilinen pencereyle (pozitif
+  kontrol — servisin çalıştığını doğrular), bir tanesi geçmiş çapayla.
+- min_aralik'i DÜŞÜRME, yükselt (5,0 sn). Belgelenmemiş bir iç servise
+  ön yüzden daha nazik davranılır, daha az değil.
+- Kimlik doğrulama, imzalı istek veya özel başlık gerekiyorsa DUR.
+  Bunları taklit etmek "iyi niyetli istemci" sınırının dışına çıkar.
+
+Yol bulunamazsa veya 10 istek yetmezse: dur, bulduğunu raporla, bütçe
+büyütme.
+
+Çıktı: ARKA_UC_SONDASI.md — uç yolu (bulunduysa), istek/yanıt biçimi,
+keyfi çapa kabul ediliyor mu, ve KULLANIM İÇİN ÖNERİ + karşı argüman.
+Kullanma kararını bana bırak; kodu kendiliğinden bağlama.
+```
+
+**Çıkış kriteri:** "Keyfi çapa kabul ediliyor / edilmiyor / yol bulunamadı"
+üçünden biri gerekçeli yazılı. Kullanım kararı ayrıca bana sorulmuş.
+
+---
+
+## 2.1 — Geri doldurma *(koşullu — ŞU AN DEVRE DIŞI)*
+
+> **Yalnızca 2.0 bir yol bulduysa koşulur.** 2.0 bulamadı (7 Ağu 2026),
+> bu adım **atlanıyor**, 2.2'ye geçiliyor.
+>
+> Tek yeniden açılma şartı: §9'daki arka uç servisi kararı (a) değil
+> (b)/(c) yönünde verilir ve servis keyfi tarih çapası kabul ederse.
 
 ```
 Görev: 2.0'da bulunan rotayla pencere öncesi bildirimleri indir.
@@ -904,23 +1032,28 @@ test edilmiş; entegrasyon biçimi 5.2 sonucuyla tutarlı.
 ## Faz bağımlılıkları
 
 ```
-1.0 ✔ ─► 1.1 ✔ ─► 1.1b ─► 1.2 ─► 1.3 ─► 1.4 ─► 4.0 ─► 2.2 ─► 2.3 ─► 3.1 ─► 3.2 ─► 3.3
-    2.0 ─┴──► 2.1 (koşullu) ─────────────────────►┘                                │
-                                                                                   ▼
-                                               4.1 ─► 4.2 ─► 4.3 ─► 5.1 ─► 5.2 ─► 5.3
+        ZAMAN DUYARLI          ┊         aciliyetsiz, arşiv güvende
+  ╔══════════════════════════╗ ┊
+  ║ 1.2 ──► 1.4a  (arşiv)    ║ ┊ 1.3 ─► 1.4b ─► 1.1b ─► 4.0 ─► 2.2 ─► 2.3
+  ╚══════════════════════════╝ ┊  (20/20)        2.0b ─┘         │
+   1.0 ✔  1.1 ✔  2.0 ✔        ┊                                 ▼
+   2.1 ✘ (koşul sağlanmadı)    ┊  3.1 ─► 3.2 ─► 3.3 ─► 5.1 ─► 5.2 ─► 5.3
+                               ┊  4.1 ─► 4.2 ─► 4.3 ─┘
 ```
 
-**2.0 hâlâ koşulmadı ve gecikiyor.** 1.2'nin toplama kodunu yazmadan önce
-koşulmalı: cevabı `toplayici.py`'nin "tek sabit pencere" mi "keyfi derinlik
-+ sayfalama" mı olacağını belirliyor, ve modülü iki kez yazmak 30 isteği
-harcamaktan pahalı. Ayrıca sonda 0 (pencere kayıyor mu) her geçen gün
-bayatlıyor — taban ölçüm 05.08.2026 ve tek istekle sınanıyor.
+**Kritik yol 1.2 → 1.4a'dan geçiyor ve zaman duyarlılığı ölçülmüş bir
+gerçek, tahmin değil:** geciken her gün panel derinliğinden bir gün
+düşüyor ve o gün geri gelmiyor. Bu ikisinin arasına başka adım sokulmaz.
 
-2.1 yalnız 2.0 bir yol bulursa devreye girer. 4.1 (tarihsel XKTUM verisi)
-Faz 3 ile paralel başlatılabilir; 4.0 onu beklemez.
+**Kesikli çizginin sağı arşiv çekiminden sonra.** Hepsinin ortak özelliği
+aynı: ya ağa hiç çıkmıyor (1.3, 1.4b, 4.0) ya da çektiği veri kaymıyor
+(1.1b özet sayfaları, 2.0b arka uç sondası). Bekletmenin maliyeti yok.
 
-**Kritik yol 1.4'ten geçiyor ve zaman duyarlı** — sorgu penceresi kayıyorsa
-geciken her gün panel derinliğinden düşüyor.
+**2.0 `toplayici.py`'nin şeklini belirledi: tek sabit pencere.** Keyfi
+derinlik ve sayfalama yok — sayfalama döngüsü yazılmayacak (92=92).
+
+4.1 (tarihsel XKTUM verisi) Faz 3 ile paralel başlatılabilir; 4.0 onu
+beklemez.
 
 ## Karar noktaları — otomatikleştirilmeyecek
 
@@ -929,16 +1062,20 @@ Bu noktalarda Claude Code durup sormalı; kendi başına seçmemeli:
 | Nerede | Karar | Durum |
 |---|---|---|
 | 1.0 sonrası | requests mi playwright mi | ✔ requests |
-| 1.0 sonrası | adım bütçeleri | ✔ 5 / 800 / 800 / 30 / 2.600 |
+| 1.0 sonrası | adım bütçeleri | ✔ 5 / 800 / 800 / 2.250 / 10 |
 | 1.1 | Pazar bilgisi kaynağı ve maliyeti | ✔ özet sayfası, +746 onaylandı |
+| 1.4 | Koşu kapsamı (güncel mi tüm pencere mi) | ✔ tüm pencere |
+| 2.0 sonrası | Derinlik bulunduysa ek bütçe; bulunmadıysa Faz 2 kapanır | ✔ bulunamadı → 2.1 atlandı |
+| 2.0 sonrası | Arka uç servisi (`kapsitebackend`) ölçülsün mü | ✔ ölç, ama **1.4a'dan sonra** (2.0b) |
+| 1.3 kapısı | 20/20 çekimi mi paneli mi kapılıyor | ✔ paneli (1.4b) |
+| **1.2** | `disclosureClass=DG` KAFİF kaybettiriyorsa ne yapılacak | **sıradaki** |
+| **1.4a** | Duman testi sonrası tam koşu onayı | **sıradaki** |
+| 2.0b | Arka uç bulunursa: kullanılsın mı (ölçmekten ayrı karar) | açık |
 | 1.1b | KTLEV / tasarruf finansman: spec §0.4'e madde mi, yeni durum mu | açık |
 | 1.1b | Sektörle kapanmayan belirsiz muafiyetler | açık |
-| 1.2 | `disclosureClass=DG` KAFİF kaybettiriyorsa ne yapılacak | açık |
-| 1.4 | Koşu kapsamı (güncel mi tüm pencere mi) | ✔ tüm pencere |
-| 2.0 sonrası | Derinlik bulunduysa ek bütçe; bulunmadıysa Faz 2 kapanır | açık |
 | 4.0 sonrası | Şüpheli hipotezler 4.3'e mi bekletilecek, erken mi revize | açık |
 | 3.1 | Zincir boşluğunda tolerans durumu ne olur | açık |
 | 3.2 | Ortalama PD kaynağı ve hangi dönemin ortalaması | açık |
 | 4.3 | Hipotez reddi ve yerine geçecek kural | açık |
 | 5.2 | Fiyat verisi kaynağı | açık |
-| 5.3 | Sinyal mi risk filtresi mi |
+| 5.3 | Sinyal mi risk filtresi mi | açık |

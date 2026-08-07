@@ -91,19 +91,51 @@ doğrulama `dogrula` komutunu gerçek bir dosyayla çalıştırmaktır.
 kriterleri ve otomatikleştirilmeyecek karar noktaları orada. Aşağıdaki özet
 onunla çelişirse plan değil bu dosya esastır.
 
-### Nerede kaldık (6 Ağu 2026)
+### Nerede kaldık (7 Ağu 2026)
 
-Biten: **Faz 0** · **1.0** rota keşfi · **1.1** evren.
-Testler: 51 geçiyor (22 motor + 6 çekici + 23 evren).
+Biten: **Faz 0** · **1.0** rota keşfi · **1.1** evren · **2.0** derinlik keşfi.
+Testler: 59 geçiyor (22 motor + 6 çekici + 23 evren + 8 derinlik).
 
-Sıradaki iki adım bağımsız, sırası önemsiz — ama **ikisi de 1.2'nin kodu
-yazılmadan bitmiş olmalı:**
+Sıradaki: **1.2 → 1.4a, aralıksız.** Bu ikisinin arasına başka adım
+sokulmaz — pencere 1 gün/gün kayıyor.
 
-- **2.0 derinlik keşfi** (bütçe 30). Cevabı `toplayici.py`'nin şeklini
-  belirliyor: "tek sabit pencere" ile "keyfi derinlik + sayfalama" aynı
-  modül değil. İçindeki *sonda 0* (pencere kayıyor mu) tek istek ve her
-  gün bayatlıyor; taban ölçüm 05.08.2026.
-- **1.1b özet sayfaları** (bütçe 800). Pazar + sektör + endeks üyeliği.
+**Sıra 7 Ağustos'ta değişti; iki kural yer değiştirdi:**
+
+1. **1.4 ikiye bölündü.** 1.4a yalnız indirir ve arşivler (parser'a hiç
+   dokunmaz), 1.4b ayrıştırır ve paneli üretir.
+2. **20/20 parser kapısı (1.3) artık çekimi değil paneli kapılıyor.**
+   Eski gerekçe — "2.600 isteği doğrulanmamış parser'a harcamayalım" —
+   yanlıştı: çekim parser'ı kullanmıyor, ayrıştırma arşivden tekrar
+   tekrar yapılabiliyor (kural 6). Yanlış parser bedava düzeltilir,
+   kaçırılan bildirim düzelmez.
+
+Zaman duyarlı olmayan her şey arşivin arkasına alındı:
+**1.2 → 1.4a → 1.3 → 1.4b → 1.1b → 2.0b → 4.0.**
+
+**Faz 2.0 bitti — pencere genişletilemiyor ve KAYIYOR.** Ayrıntı:
+@DERINLIK_KESFI_RAPORU.md (betik: `arac/derinlik_kesfi.py`, 22 istek).
+
+- **Derinlik geri doldurulamaz, yalnız birikir.** Tarih, sayfalama ve
+  sıralama parametrelerinin hiçbiri işlenmiyor; `startDate/endDate`
+  sunucuya *ulaşıyor* (RSC'deki `__PAGE__` searchParams'ta görünüyor) ama
+  pencere yine `[bugün − 1 yıl, bugün]` kuruluyor. Faz 2.1 atlandı.
+- **1.4 zaman duyarlı ve bu artık ölçülmüş.** Pencere 1 gün/gün kayıyor;
+  5→7 Ağustos arasında THY'nin 2025/6 Aylık KAFİF'i (1472632) erişilmez
+  oldu. 6 Aylık dalgası ağustos-eylülde yayımlanıyor: geciken her hafta
+  o dalgadan bir dilim kalıcı olarak gidiyor.
+- **`toplayici.py` tek sabit pencere toplayıcısıdır** — sayfalama döngüsü
+  yazmayın; sunucu bulduğu kaydın tamamını tek sayfada basıyor (92=92).
+- **1.2 için:** `bildirim_id` checkbox kazımaya gerek yok; RSC yükündeki
+  `disclosureBasic` nesnesi `disclosureIndex`, `publishDate`,
+  `disclosureClass`, `year`, `period`, `title` alanlarını yapılandırılmış
+  veriyor. Checkbox yolu yedek katman olarak kalsın.
+- **Arka uç servisi (`kapsitebackend.mkk.com.tr`) — plan 2.0b, 1.4a'DAN
+  SONRA.** Ölçülmesi onaylandı (bütçe 10), **kullanılması ayrı karar.**
+  1 yıl sınırı formun kendi metnine göre bir *aralık genişliği* sınırı
+  ("Seçilen Tarih Aralığı 1 Yıldan Fazla Olamaz"), çapa sınırı değil;
+  servis keyfi çapa kabul ederse Faz 2 açılır. Belgelenmemiş bir iç
+  servise ön yüzden **daha nazik** davranılır: `min_aralik` düşürülmez,
+  yükseltilir. Kimlik doğrulama veya imzalı istek gerekiyorsa durulur.
 
 **Evren 795 pay kodu / 746 tüzel kişi.** `stockCode` virgüllü çoklu kod
 taşıyabiliyor (`"ALBRK, ALK"`, 45 tüzel kişide). Bunun iki sonucu var ve
@@ -158,6 +190,11 @@ Karara bağlananlar:
    şartı olduğu için (spec §0.4) ikinci kaynak gerekiyor — henüz bulunmadı.
 
 **Bütçe hâlâ karar noktasıdır.** Ölçülen maliyet ~3,2 sn/istek. Onaylanmış
-bütçeler: 1.1 → 5, 1.2 → 800, 1.3 → 30, 1.4 → 2.600. Bunlar plan adımı başına
-ayrı ayrı verilir; `BütçeAşıldı` bir arıza değil, sorulacak bir sorudur —
-kodun içinden otomatik büyütmeyin.
+bütçeler: 1.1 → 5, 1.1b → 800, 1.2 → 800, 1.3 → 30, 2.0 → 30 (bitti, 22
+kullanıldı), 1.4 → 2.600. Bunlar plan adımı başına ayrı ayrı verilir;
+`BütçeAşıldı` bir arıza değil, sorulacak bir sorudur — kodun içinden otomatik
+büyütmeyin.
+
+1.4 tahmini 2.0 sonrası aşağı çekildi: pencerede şirket başına ~3 değil **~2**
+KAFİF görünüyor (THY'de 3'tü, biri düştü) → 746 sorgu + ~1.500 form ≈ **2.250**,
+onaylanmış 2.600'ün altında.
