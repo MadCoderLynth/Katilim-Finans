@@ -130,9 +130,9 @@ Karara bağlananlar:
 
 - **`requests` yeter, `playwright` gerekmez.** Sayfalar Next.js ama veri
   sunucu tarafında basılıyor.
-- **Evren tek istekte geliyor:** `/tr/bist-sirketler` → 746 şirket, gömülü RSC
-  yükünde yapılandırılmış JSON (`stockCode`, `kapMemberTitle`, `mkkMemberOid`).
-  DOM kazımaya gerek yok.
+- **Evren tek istekte geliyor:** `/tr/bist-sirketler` → 746 tüzel kişi (= 795
+  pay kodu, yukarı bakın), gömülü RSC yükünde yapılandırılmış JSON
+  (`stockCode`, `kapMemberTitle`, `mkkMemberOid`). DOM kazımaya gerek yok.
 - **Spec §1.1'in "iki ayrı kimlik" sorunu yok.** `mkkMemberOid` RSC yükünde,
   `{sayısal_id}-{slug}` aynı satırın href'inde. Ayrı bir eşleme adımı gerekmez.
 - **`bildirim_id`, satırın checkbox `id` niteliğinde** — `/tr/Bildirim/{id}`
