@@ -12,9 +12,17 @@ venv/
 veri/ham/*
 veri/panel/*
 veri/onbellek/*
-veri/evren/*
 veri/referans/*
 !veri/*/.gitkeep
+
+# İSTİSNA — veri/evren/ git'e GİRER (1.4a kararı).
+# 1.4a ölçtü: pencere keşfi öldürüyor, erişimi değil (15/15 indi, 404 yok).
+# Yani 239 MB'lık HTML, ~90 KB'lık kimlik listesinden yeniden kurulabilir;
+# telafisi olmayan tek parça bu. Ek fayda: her commit o günün keşif
+# penceresinin fotoğrafını tutuyor — pencerenin nasıl kaydığının kaydı
+# kendiliğinden birikiyor.
+veri/evren/arsiv/*
+!veri/evren/*.csv
 
 .claude/settings.local.json
 COMMIT_MESAJI.txt

@@ -8,7 +8,8 @@ Bu belge, her fazın Claude Code'a verilecek promptlarını içerir. Kaynaklar:
 1.0 rota keşfi ✔ · 1.1 evren ✔ (795 ticker / 746 tüzel kişi) ·
 2.0 derinlik keşfi ✔ (BULUNAMADI, pencere kayıyor) ·
 **1.2 bildirim sorguları ✔ — 1.276 KAFİF kimliği toplandı.**
-84 test geçiyor. Sıradaki: **1.4a** (arşiv çekimi, 1.276 form).
+**1.4a form arşivi ✔ — 1.276/1.276 form diskte.**
+97 test geçiyor. Sıradaki: **1.3** (20/20 parser kapısı, ağa çıkmaz).
 
 **1.1b ertelendi ve 1.3'ün kapısı yer değiştirdi (7 Ağu).** Şirket özet
 sayfaları kaymıyor, ne zaman çekilse aynı veriyi veriyor; KAFİF formları
@@ -427,12 +428,30 @@ gerekçe yazılı ve karantinada. `tests/test_pilot.py` yeşil.
 
 ---
 
-## 1.4a — Arşiv çekimi · bütçe **2.250** · **ZAMAN DUYARLI**
+## 1.4a — Arşiv çekimi ✔ **BİTTİ (8 Ağu 2026)**
 
-> Projenin en aciliyetli adımı. Pencere 1 gün/gün kayıyor ve 6 Aylık
-> dalgası ağustos–eylülde yayımlanıyor; dalganın başı zaten düştü
-> (1472632, THY 2025/6 Aylık — 5 Ağustos'ta vardı, 7 Ağustos'ta yok).
-> Geciken her hafta o dalgadan bir dilim kalıcı olarak gidiyor.
+Çıktı: `INDIRME_RAPORU.md`, modül `katilim/toplayici.py`.
+**1.276/1.276 form arşivde** (239 MB), eksik yok, kalıcı hata yok.
+1.273 başarılı çekim + 373 yeniden deneme ≈ 1.646 HTTP denemesi;
+onaylı 2.250/2.600 bütçesi aşılmadı.
+
+| Bulgu | Etkisi |
+|---|---|
+| **Pencere dışı 15 kimliğin 15'i indi, 0 404** | `/tr/Bildirim/{id}`'de erişim ufku bulunamadı → arşiv kimliklerden yeniden kurulabilir |
+| Üçü `dogrula` ile açıldı, üçünde de self-check GEÇTİ | "yumuşak 404" değil, gerçek form |
+| Erişim ufkunun **derinliği ölçülemedi** | En eski kimliğimiz 05.08.2025; daha eskisi için kimlik yok |
+| 114 geçici hata, üç geçişte kapandı (aralık 2→5→6 sn) | Negatif önbelleğe yazılmadı; yazılsaydı 114 form kalıcı "yok" olurdu |
+| 33 pay kodu `AYIRT_EDILEMEDI` | Muaf ile beyansız bu rotadan ayrılmıyor; `MUAF` varsayılmadı |
+
+**Yedekleme politikası için sonuç (karar bekliyor):** asıl kritik dosya
+`veri/evren/bildirim_gecmisi.csv` (~90 KB, git'e sığar) — 239 MB'lık HTML
+ondan yeniden indirilebilir. Yine de arşiv silinmemeli: ölçüm bugünün
+davranışı, KAP yarın bu rotaya da ufuk koyabilir.
+
+*1.4a promptu arşiv olarak duruyor.*
+
+<details>
+<summary>1.4a promptu (arşiv)</summary>
 
 ```
 Görev: 1.2'nin listelediği TÜM KAFİF formlarını indir ve arşivle.
@@ -482,8 +501,11 @@ kaldığı yerden devam etsin.
 istek, en eski ve en yeni gonderim_ts (pencerenin fiili genişliği).
 ```
 
-**Çıkış kriteri:** `bildirim_gecmisi.csv`'deki her KAFİF satırının karşılığı
-diskte var veya hata gerekçesi yazılı. Arşiv bütünlüğü doğrulanmış.
+**Çıkış kriteri:** ✔ karşılandı — 1.276 kimliğin 1.276'sının karşılığı
+diskte; eksik 0, kimliksiz dosya 0, 50 KB altı şüpheli dosya 0; 30 dosyada
+sha256 yeniden hesaplandı, hepsi tuttu.
+
+</details>
 
 ---
 
@@ -1110,18 +1132,23 @@ test edilmiş; entegrasyon biçimi 5.2 sonucuyla tutarlı.
 ## Faz bağımlılıkları
 
 ```
-        ZAMAN DUYARLI          ┊         aciliyetsiz, arşiv güvende
+        ZAMAN DUYARLI ✔ BİTTİ  ┊         aciliyetsiz, arşiv güvende
   ╔══════════════════════════╗ ┊
-  ║ 1.2 ──► 1.4a  (arşiv)    ║ ┊ 1.3 ─► 1.4b ─► 1.1b ─► 4.0 ─► 2.2 ─► 2.3
+  ║ 1.2 ✔ ──► 1.4a ✔ (arşiv) ║ ┊ 1.3 ─► 1.4b ─► 1.1b ─► 4.0 ─► 2.2 ─► 2.3
   ╚══════════════════════════╝ ┊  (20/20)        2.0b ─┘         │
    1.0 ✔  1.1 ✔  2.0 ✔        ┊                                 ▼
    2.1 ✘ (koşul sağlanmadı)    ┊  3.1 ─► 3.2 ─► 3.3 ─► 5.1 ─► 5.2 ─► 5.3
                                ┊  4.1 ─► 4.2 ─► 4.3 ─┘
 ```
 
-**Kritik yol 1.2 → 1.4a'dan geçiyor ve zaman duyarlılığı ölçülmüş bir
-gerçek, tahmin değil:** geciken her gün panel derinliğinden bir gün
-düşüyor ve o gün geri gelmiyor. Bu ikisinin arasına başka adım sokulmaz.
+**Kritik yol tamamlandı (8 Ağu 2026).** 1.2 → 1.4a hattı bitti; 1.276
+formun tamamı diskte. Bundan sonraki hiçbir adım zaman duyarlı değil:
+kalanların hepsi ya ağa hiç çıkmıyor ya da çektiği veri kaymıyor.
+
+**Yeni bakım yükümlülüğü: 1.2'nin düzenli koşulması.** Kayan pencere
+yalnız *keşfi* öldürüyor (1.4a §3, n=15); yani kaçırılan tek şey "böyle
+bir form var" bilgisi. Her 1.2 koşusu o günün penceresindeki kimlikleri
+kalıcılaştırıyor ve arşiv sonradan tamamlanabiliyor.
 
 **Kesikli çizginin sağı arşiv çekiminden sonra.** Hepsinin ortak özelliği
 aynı: ya ağa hiç çıkmıyor (1.3, 1.4b, 4.0) ya da çektiği veri kaymıyor
@@ -1141,6 +1168,7 @@ Bu noktalarda Claude Code durup sormalı; kendi başına seçmemeli:
 |---|---|---|
 | 1.0 sonrası | requests mi playwright mi | ✔ requests |
 | 1.0 sonrası | adım bütçeleri | ✔ 5 / 800 / 800 / 2.250 / 10 |
+| 1.4a sonrası | Yedekleme: kimlik CSV'si mi, 239 MB HTML mi? (arşiv kimliklerden yeniden kurulabiliyor, n=15) | **açık** — önerim: ikisi de, CSV git'e |
 | 1.1 | Pazar bilgisi kaynağı ve maliyeti | ✔ özet sayfası, +746 onaylandı |
 | 1.4 | Koşu kapsamı (güncel mi tüm pencere mi) | ✔ tüm pencere |
 | 2.0 sonrası | Derinlik bulunduysa ek bütçe; bulunmadıysa Faz 2 kapanır | ✔ bulunamadı → 2.1 atlandı |

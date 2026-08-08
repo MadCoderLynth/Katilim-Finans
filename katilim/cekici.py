@@ -180,7 +180,15 @@ class Çekici:
         self.user_agent = user_agent
         self.istatistik = {"onbellek": 0, "ag": 0, "yeniden_deneme": 0, "negatif": 0}
 
-    def getir(self, url: str, *, zorla: bool = False) -> str:
+    def getir(self, url: str, *, zorla: bool = False, onbellekle: bool = True) -> str:
+        """Gövdeyi getirir.
+
+        `onbellekle=False`: gövde URL önbelleğine YAZILMAZ, ama varsa yine
+        oradan OKUNUR. Arşivi kendi adlandırmasıyla başka yere yazan çağıran
+        içindir (1.4a: `veri/ham/{TICKER}_{YIL}_{PERIYOT}_{id}.html`).
+        Amaç aynı 240 MB'ı iki kez saklamamak; idempotanlık zaten
+        `bildirim_id` üzerinden kuruluyor (kural 6).
+        """
         if not zorla and self.onbellek.var_mi(url):
             self.istatistik["onbellek"] += 1
             return self.onbellek.oku(url)
@@ -209,7 +217,8 @@ class Çekici:
 
             if durum == 200:
                 self.istatistik["ag"] += 1
-                self.onbellek.yaz(url, govde)
+                if onbellekle:
+                    self.onbellek.yaz(url, govde)
                 return govde
 
             if durum in (429, 500, 502, 503, 504):

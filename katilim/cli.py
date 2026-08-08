@@ -300,6 +300,103 @@ def cmd_bildirimler(args) -> int:
     return 1 if (okunamayan or hatali or kesildi) else 0
 
 
+def cmd_indir(args) -> int:
+    """Faz 1.4a — 1.2'nin listelediği tüm KAFİF formlarını indir ve arşivle.
+
+    AYRIŞTIRMAZ. Parser'a dokunmadığı için 1.3'ü beklemez.
+    """
+    from . import bildirim, toplayici
+    from .cekici import BütçeAşıldı, HızSınırlayıcı, Çekici
+
+    gecmis = bildirim.oku(args.gecmis_csv)
+    if not gecmis:
+        print(f"{args.gecmis_csv} yok. Önce: python -m katilim.cli bildirimler",
+              file=sys.stderr)
+        return 2
+
+    if args.ornek:
+        # Duman testi: ilk N pay kodunun formları. Parser kapısı DEĞİL,
+        # indirme döngüsünün kendi testi.
+        secili = sorted({s["ticker"] for s in gecmis})[: args.ornek]
+        gecmis = [s for s in gecmis if s["ticker"] in secili]
+        print(f"DUMAN TESTİ: {len(secili)} pay kodu, {len(gecmis)} satır")
+
+    cekici = Çekici(
+        args.onbellek,
+        sinirlayici=HızSınırlayıcı(
+            min_aralik=args.aralik, jitter=1.0, oturum_butcesi=args.butce
+        ),
+    )
+
+    def ilerleme(sira, toplam, kayit):
+        if sira % args.her == 0 or sira == toplam:
+            print(f"  [{sira:5d}/{toplam}] {kayit.ticker:8s} {kayit.bildirim_id} "
+                  f"{kayit.durum:12s} {kayit.bayt:>8,} B "
+                  f"(ağ: {cekici.istatistik['ag']})", flush=True)
+
+    def kontrol_noktasi(ind):
+        toplayici.indeksi_yaz(ind, args.indeks_csv)
+
+    kesildi = None
+    try:
+        indirme = toplayici.formlari_indir(
+            gecmis, cekici,
+            ham_dizini=args.ham,
+            ilerleme=ilerleme,
+            kontrol_noktasi=kontrol_noktasi,
+        )
+    except BütçeAşıldı as e:
+        # Bütçe bir arıza değil, karar noktası. O ana kadarki iş diskte.
+        kesildi = str(e)
+        print(f"\nBÜTÇE AŞILDI: {e}", file=sys.stderr)
+        print("Kısmi arşiv korundu; bütçeyi bilinçli yükseltip tekrar koşun.",
+              file=sys.stderr)
+        return 2
+
+    toplayici.indeksi_yaz(indirme, args.indeks_csv)
+
+    # indirildi_mi işaretini 1.2'nin CSV'sine geri yaz.
+    inen = {
+        k.bildirim_id for k in indirme.kayitlar
+        if k.durum in (toplayici.DURUM_INDIRILDI, toplayici.DURUM_ZATEN_VARDI)
+    }
+    for s in gecmis:
+        if s["bildirim_id"] in inen:
+            s["indirildi_mi"] = True
+    if not args.ornek:
+        bildirim.yaz(gecmis, args.gecmis_csv)
+
+    # KAFİF'i olmayan şirketler: sessizce atlanmaz.
+    beyan = []
+    durum_yolu = pathlib.Path(args.durum_csv)
+    if durum_yolu.exists():
+        with open(durum_yolu, newline="", encoding="utf-8-sig") as f:
+            beyan = toplayici.beyan_durumlari(evren.oku(args.evren_csv), list(csv.DictReader(f)))
+        toplayici.beyan_durumlarini_yaz(beyan, args.beyan_csv)
+
+    o = toplayici.ozet(indirme, beyan)
+    print(f"\nARŞİV -> {args.ham}")
+    print(f"  bildirim          : {o['bildirim']}")
+    print(f"  durum dağılımı    : {o['durum_dagilimi']}")
+    print(f"  arşivdeki form    : {o['arsivdeki_form']}")
+    print(f"  gönderim aralığı  : {o['en_eski']} .. {o['en_yeni']}")
+    print(f"  boyut (min/med/max): {o['bayt_min']:,} / {o['bayt_medyan']:,} / {o['bayt_max']:,} B"
+          f"   toplam {o['bayt_toplam']/1e6:.0f} MB")
+    print(f"  PENCERE DIŞI      : {o['pencere_disi']} kimlik -> "
+          f"{o['pencere_disi_inen']} indi, {o['pencere_disi_yok']} yok (404)")
+    if beyan:
+        print(f"  beyan durumu      : {o['beyan_dagilimi']}")
+    print(f"  istek             : {cekici.istatistik}")
+    if indirme.uyarilar:
+        print(f"\nUYARI ({len(indirme.uyarilar)}):", file=sys.stderr)
+        for u in indirme.uyarilar[:20]:
+            print(f"  {u}", file=sys.stderr)
+
+    hatali = o["durum_dagilimi"].get(toplayici.DURUM_HATA, 0)
+    yok = o["durum_dagilimi"].get(toplayici.DURUM_YOK, 0)
+    return 1 if (hatali or yok or kesildi) else 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="katilim", description=__doc__)
     alt = p.add_subparsers(dest="komut", required=True)
@@ -335,6 +432,22 @@ def main(argv=None) -> int:
                     help="DG filtresi doğrulaması için şirket sayısı (0=atla)")
     sp.add_argument("--her", type=int, default=25, help="kaç şirkette bir ilerleme bas")
     sp.set_defaults(fn=cmd_bildirimler)
+
+    sp = alt.add_parser("indir")
+    sp.add_argument("--gecmis-csv", default="veri/evren/bildirim_gecmisi.csv")
+    sp.add_argument("--durum-csv", default="veri/evren/sorgu_durumu.csv")
+    sp.add_argument("--evren-csv", default=str(evren.EVREN_CSV))
+    sp.add_argument("--indeks-csv", default="veri/ham/arsiv_indeksi.csv")
+    sp.add_argument("--beyan-csv", default="veri/evren/beyan_durumu.csv")
+    sp.add_argument("--ham", default="veri/ham")
+    sp.add_argument("--onbellek", default="veri/onbellek")
+    sp.add_argument("--butce", type=int, default=2600, help="oturum istek bütçesi")
+    sp.add_argument("--aralik", type=float, default=2.0,
+                    help="istekler arası asgari saniye (düşürmeyin)")
+    sp.add_argument("--ornek", type=int, default=0,
+                    help="duman testi: yalnız ilk N pay kodunun formları")
+    sp.add_argument("--her", type=int, default=50, help="kaç bildirimde bir ilerleme bas")
+    sp.set_defaults(fn=cmd_indir)
 
     args = p.parse_args(argv)
     return args.fn(args)

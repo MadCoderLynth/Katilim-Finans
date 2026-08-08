@@ -14,6 +14,7 @@ Detaylar: @BIST_Katilim_Uygunluk_Motoru_Spesifikasyonu_v0.1.md ve @OKUBENI.md
 python3 tests/test_motor.py                              # 22 test, pytest gerektirmez
 python3 tests/test_cekici.py                             # 9 test, çekim katmanı (ağa çıkmaz)
 python3 -m katilim.cli bildirimler --butce 800            # KAFİF kimlikleri (Faz 1.2)
+python3 -m katilim.cli indir --butce 2600                 # formları arşivle (Faz 1.4a)
 python3 -m katilim.cli dogrula veri/ham/DOSYA.html        # ayrıştır + self-check + karar
 python3 -m katilim.cli dok veri/ham/DOSYA.html            # tanı: tabloları imzalarıyla dök
 python3 -m katilim.cli toplu veri/ham --csv veri/panel/panel.csv
@@ -104,12 +105,38 @@ onunla çelişirse plan değil bu dosya esastır.
 ### Nerede kaldık (7 Ağu 2026)
 
 Biten: **Faz 0** · **1.0** rota keşfi · **1.1** evren · **2.0** derinlik
-keşfi · **1.2** bildirim sorguları.
-Testler: 84 geçiyor (22 motor + 9 çekici + 23 evren + 8 derinlik +
-15 bildirim + 7 rsc).
+keşfi · **1.2** bildirim sorguları · **1.4a** form arşivi.
+Testler: 97 geçiyor (22 motor + 9 çekici + 23 evren + 8 derinlik +
+15 bildirim + 7 rsc + 13 toplayıcı).
 
-Sıradaki: **1.4a** — `bildirim_gecmisi.csv`'deki **1.276 benzersiz formu**
-indir ve arşivle. Ayrıntı: @BILDIRIM_GECMISI_RAPORU.md.
+Sıradaki: **1.3** — 20/20 parser kapısı. Artık **ağa çıkmadan** koşulabilir:
+1.276 formun tamamı `veri/ham/` altında. Ayrıntı: @INDIRME_RAPORU.md.
+
+**Faz 1.4a bitti — arşiv tam.** 1.276/1.276 form indi, eksik yok, kalıcı
+hata yok. 239 MB, `veri/ham/{TICKER}_{YIL}_{PERIYOT}_{bildirim_id}.html`.
+İndeks: `veri/ham/arsiv_indeksi.csv` (sha256 dahil).
+
+- **Pencere dışı erişim ufku BULUNAMADI (n=15).** Bugünkü keşif
+  penceresinde olmayan 15 kimliğin **15'i de indi**, 404 yok; üçü
+  `dogrula` ile açıldı, üçünde de self-check GEÇTİ. Yani asıl yedeklenmesi
+  gereken şey **kimlik listesi** (`bildirim_gecmisi.csv`, ~90 KB) — 239
+  MB'lık HTML ondan yeniden kurulabilir. **Ama HTML arşivi yine silinmez:**
+  ölçüm bugünün davranışı, KAP yarın bu rotaya da ufuk koyabilir.
+  → **Karar: `veri/evren/*.csv` git'e alındı** (~420 KB). Yan fayda: her
+  commit o günün keşif penceresinin fotoğrafı; pencerenin nasıl kaydığının
+  kaydı kendiliğinden birikiyor. `veri/ham/` git dışı, ayrı yedek ister.
+- **Erişim ufkunun derinliği ÖLÇÜLEMEDİ.** En eski kimliğimiz 05.08.2025;
+  daha eskisine ait kimlik olmadığı için "1 yıldan derine iniyor mu"
+  sorusu bu veriyle cevaplanamaz.
+- **114 geçici hata üç geçişte kapatıldı** (aralık 2 → 5 → 6 sn).
+  Hiçbiri negatif önbelleğe yazılmadı; yazılsaydı 114 form kalıcı olarak
+  "yok" sayılacaktı.
+- **Beyan durumu** (`veri/evren/beyan_durumu.csv`, 795 pay kodu):
+  539 BEYAN_VAR · 150 KAPSAM_DISI · 73 BEYAN_YOK · **33 AYIRT_EDILEMEDI**.
+  Sonuncusu bilinçli olarak `MUAF` değil — muaf olan ile beyan vermeyen
+  bu rotadan ayırt edilemiyor.
+- **`Çekici.getir(onbellekle=False)`** eklendi: arşivi kendi adlandırmasıyla
+  başka yere yazan çağıran için. Okuma yine önbellekten.
 
 **Sıra 7 Ağustos'ta değişti; iki kural yer değiştirdi:**
 
@@ -122,7 +149,7 @@ indir ve arşivle. Ayrıntı: @BILDIRIM_GECMISI_RAPORU.md.
    kaçırılan bildirim düzelmez.
 
 Zaman duyarlı olmayan her şey arşivin arkasına alındı:
-**1.2 ✔ → 1.4a → 1.3 → 1.4b → 1.1b → 2.0b → 4.0.**
+**1.2 ✔ → 1.4a ✔ → 1.3 → 1.4b → 1.1b → 2.0b → 4.0.**
 
 **Faz 1.2 bitti — ve zaman duyarlılığının yerini değiştirdi.**
 @BILDIRIM_GECMISI_RAPORU.md (651 istek / onaylı 800).
