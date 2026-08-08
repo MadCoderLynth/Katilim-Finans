@@ -177,7 +177,15 @@ Aşağıdakiler kural olarak kodlanacak ama **doğrulanmamış** kabul edilecek,
 - **H4:** Tolerans durumu şirket bazında, kriter bazında değil.
 - **H5:** BIST, formun **özet alanındaki** oranı kullanıyor; alt kalemlerden yeniden hesaplanan oranı değil. (Faz 1.3 ölçümü: 1.276 formun 19'unda formun kendi 4E TOPLAM satırı kendi kalemleriyle tutmuyor, ikisi farklı oran üretiyor. Standart beyan esaslı işlediği için BIST'in beyan edilen özeti kullanması muhtemel — ama doğrulanmadı.)
 
-**H5 için ayrıcalıklı bir sınama imkânı var.** O 19 kayıt, iki hipotezin *farklı sonuç öngördüğü* doğal deneydir; başka hiçbir kayıt ayırt edici değildir. Faz 4/4.0'da bu satırlara ayrı bakılır. Uyarı: kararı fiilen çeviren alt küme çok daha küçük (bilinen: PNLSN 2025/6 Aylık, 4,67 % → UYGUN vs. 5,30 % → aşım), yani sınama n≈1-2 olabilir; tek gözlemle H5 "doğrulandı" sayılmaz.
+**H5 şu anki veriyle SINANAMIYOR (1.4b ölçümü, 8 Ağu 2026).** Sıkılaşan üç kademe:
+
+1. 1.276 formun 22'sinde iki oran ayrışıyor; 3'ünde kalem oranı tanımsız (4E=0) → ayırt edici aday **19**.
+2. Bu 19'un yalnız **1'inde** iki oran farklı *karar* üretiyor: PNLSN 2025/6 Aylık (özet 5,30 % → TOLERANSTA, kalem 4,67 % → UYGUN).
+3. O tek kayıt da **geçersiz kılınmış bir düzeltmedir.** PNLSN aynı dönemi üç kez vermiş (08.08 → 13.08 → 04.09.2025); §3.2 gereği geçerli olan en geç kayıt ve onda iki oran aynı kararı veriyor. Düzeltmeler çözüldükten sonra ayırt edici örneklem **n=0**.
+
+Sonuç: H5 kanıtla desteklenmiş değil, **yanlışlanamamış bir yargı çağrısıdır.** Faz 4 onu sınayamaz; panel derinleştikçe (her yeni KAFİF dalgası) yeni ayırt edici kayıt birikmesi beklenir. O zamana kadar varsayılan gerekçesi ampirik değil, aşağıdaki maliyet argümanıdır.
+
+*Kayıt için:* geçersiz kılınmış kayıt 08–13 Ağustos 2025 arasında beş gün boyunca kamuya açık olan durumdu. Endeks revizyonları 1 Mayıs / 1 Ekim'de yürürlüğe girdiği için bu pencere hiçbir revizyonla kesişmiyor — yani teorik olarak bile gözlemlenebilir bir sonuç doğurmuyor.
 
 **Varsayılan seçim ve gerekçesi.** Karar sütunu **özet alanından** üretilir (H5 kabul edilmiş gibi), kalem bazlı oran ikinci sütunda taşınır. Gerekçe aritmetik değil hata maliyeti asimetrisi: BIST özeti kullanıyorsa ve biz kalemi kullanırsak PNLSN gibi vakalarda "UYGUN" deriz, BIST elemiştir → **yanlış pozitif**, uygunsuz hisseyi uygun göstermek. Tersi durumda gereksiz eleme yaparız → kaçırılan fırsat, ucuz olan hata.
 

@@ -397,6 +397,61 @@ def cmd_indir(args) -> int:
     return 1 if (hatali or yok or kesildi) else 0
 
 
+def cmd_panel(args) -> int:
+    """Faz 1.4b — arşivi ayrıştır, snapshot panelini üret. Ağa çıkmaz."""
+    from . import panel, toplayici
+
+    sirketler = evren.oku(args.evren_csv)
+    if not sirketler:
+        print(f"{args.evren_csv} yok. Önce: python -m katilim.cli evren --yenile",
+              file=sys.stderr)
+        return 2
+    muafiyet = {s.ticker: s.mali_sektor_muaf for s in sirketler}
+
+    def ilerleme(sira, toplam):
+        print(f"  {sira}/{toplam} ayrıştırıldı", flush=True)
+
+    try:
+        kayitlar, rapor = panel.ayristir_arsiv(
+            args.ham,
+            indeks_csv=args.indeks_csv,
+            evren_tickerlari=set(muafiyet),
+            ilerleme=ilerleme,
+        )
+    except panel.ArsivOkunamadi as e:
+        print(f"ARŞİV OKUNAMADI: {e}", file=sys.stderr)
+        return 2
+
+    satirlar = panel.snapshot_uret(kayitlar, muafiyet=muafiyet)
+    yol = panel.yaz(satirlar, args.csv)
+    o = panel.ozet(satirlar, rapor)
+
+    print(f"\nSNAPSHOT -> {yol}")
+    print(f"  panel satırı      : {o['panel_satiri']} "
+          f"({o['benzersiz_bildirim']} bildirim, {o['benzersiz_ticker']} pay kodu)")
+    print(f"  ayrıştırma        : {o['ayristirilan']} okundu, "
+          f"{o['ayristirma_hatasi']} hata, {o['dosyasi_yok']} dosyası yok")
+    print(f"  self-check        : {o['self_check']}   karantina: {o['karantina']}")
+    print(f"  karar (ÖZET)      : {o['karar_dagilimi']}")
+    print(f"  karar (kalem)     : {o['karar_kalem_dagilimi']}")
+    print(f"  oran ayrışan      : {o['oran_ayrisiyor']}  "
+          f"H5 ayırt edici: {o['h5_ayirt_edici']}  karar çeviren: {o['h5_karar_ceviren']}")
+    for s in o["h5_karar_ceviren_liste"]:
+        print(f"      * {s}")
+    print(f"  şablon imzası     : {o['sablon_imzasi']}")
+    print(f"  form etiketi ayrışan: {o['form_etiketi_ayrisan']}")
+    print(f"  gönderim aralığı  : {o['en_eski']} .. {o['en_yeni']}")
+
+    if rapor.hatali:
+        print(f"\nAYRIŞTIRMA HATASI ({len(rapor.hatali)}):", file=sys.stderr)
+        for bid, mesaj in rapor.hatali[:20]:
+            print(f"  {bid}: {mesaj}", file=sys.stderr)
+    if rapor.evrende_olmayan:
+        print(f"\nEVRENDE OLMAYAN KOD: {sorted(set(rapor.evrende_olmayan))}",
+              file=sys.stderr)
+    return 1 if (rapor.hatali or rapor.dosyasi_yok) else 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="katilim", description=__doc__)
     alt = p.add_subparsers(dest="komut", required=True)
@@ -448,6 +503,14 @@ def main(argv=None) -> int:
                     help="duman testi: yalnız ilk N pay kodunun formları")
     sp.add_argument("--her", type=int, default=50, help="kaç bildirimde bir ilerleme bas")
     sp.set_defaults(fn=cmd_indir)
+
+    sp = alt.add_parser("panel")
+    sp.add_argument("--ham", default="veri/ham")
+    sp.add_argument("--indeks-csv", default="veri/ham/arsiv_indeksi.csv")
+    sp.add_argument("--evren-csv", default=str(evren.EVREN_CSV))
+    sp.add_argument("--csv", default=None,
+                    help="çıktı yolu (varsayılan: veri/panel/snapshot_{bugün}.csv)")
+    sp.set_defaults(fn=cmd_panel)
 
     args = p.parse_args(argv)
     return args.fn(args)

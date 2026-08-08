@@ -16,6 +16,7 @@ python3 tests/test_cekici.py                             # 9 test, çekim katman
 python3 tests/test_pilot.py                              # 9 test, 20 gerçek KAP belgesi (kanıt katmanı)
 python3 -m katilim.cli bildirimler --butce 800            # KAFİF kimlikleri (Faz 1.2)
 python3 -m katilim.cli indir --butce 2600                 # formları arşivle (Faz 1.4a)
+python3 -m katilim.cli panel                              # snapshot paneli (Faz 1.4b)
 python3 -m katilim.cli dogrula veri/ham/DOSYA.html        # ayrıştır + self-check + karar
 python3 -m katilim.cli dok veri/ham/DOSYA.html            # tanı: tabloları imzalarıyla dök
 python3 -m katilim.cli toplu veri/ham --csv veri/panel/panel.csv
@@ -83,11 +84,14 @@ Karar motorunda kural olarak kodlu ama **kanıtlanmamış** (spec §2.3):
 - **H3:** BIST payda olarak max(ort. PD, toplam varlık) kullanıyor.
 - **H4:** Tolerans durumu şirket bazında, kriter bazında değil.
 - **H5:** BIST formun **özet alanındaki** oranı kullanıyor, kalemlerden
-  yeniden hesaplananı değil. → 1.3'te 19 formda ikisi ayrışıyor; en az
-  birinde (PNLSN 2025/6 Aylık) karar çeviriyor. **Varsayılan: özet alanı**
-  — aritmetik doğruluk yüzünden değil, hata maliyeti asimetrisi yüzünden.
-  Kalem bazlı oran panelde ikinci sütun olarak taşınır; o 19 kayıt H5'in
-  tek ayırt edici örneklemi, 4.0'da ayrı bakılır.
+  yeniden hesaplananı değil. **Varsayılan: özet alanı** — aritmetik
+  doğruluk yüzünden değil, hata maliyeti asimetrisi yüzünden (özeti
+  kullanan BIST + kalemi kullanan biz = yanlış pozitif, pahalı olan hata).
+  ⚠ **H5 mevcut veriyle SINANAMIYOR.** 22 ayrışan kayıt → 3'ü tanımsız
+  (4E=0) → 19 aday → yalnız 1'i farklı *karar* veriyor (PNLSN 2025/6
+  Aylık) → o da geçersiz kılınmış düzeltme, 2.3 sonrası **n=0**.
+  Yani H5 desteklenmiş değil, yalnızca yanlışlanamamış. 4.0 onu sınamaya
+  çalışmasın; örneklem panel derinleştikçe birikir.
 
 Bunlar ancak **Faz 4** (kararlarımız vs. resmi XKTUM bileşen listeleri) ile
 sınanabilir. Faz 4 öncesinde üretilen panel araştırma çıktısıdır, karar dayanağı
@@ -112,11 +116,33 @@ onunla çelişirse plan değil bu dosya esastır.
 ### Nerede kaldık (7 Ağu 2026)
 
 Biten: **Faz 0** · **1.0** rota keşfi · **1.1** evren · **2.0** derinlik
-keşfi · **1.2** bildirim sorguları · **1.4a** form arşivi · **1.3** parser kapısı.
-Testler: 106 geçiyor (22 motor + 9 çekici + 23 evren + 8 derinlik +
-15 bildirim + 7 rsc + 13 toplayıcı + 9 pilot).
+keşfi · **1.2** bildirim sorguları · **1.4a** form arşivi · **1.3** parser
+kapısı · **1.4b** snapshot paneli.
+Testler: 118 geçiyor (22 motor + 9 çekici + 23 evren + 8 derinlik +
+15 bildirim + 7 rsc + 13 toplayıcı + 9 pilot + 12 panel).
 
-Sıradaki: **1.4b** — arşivi ayrıştır, snapshot panelini üret. Ağ isteği yok.
+Sıradaki: **1.1b** (özet sayfaları, bütçe 800) — 4.0'ın girdisi olan
+`endeks_uyeligi.csv` oradan geliyor. Ardından **4.0** (ön mutabakat).
+
+**Faz 1.4b bitti — snapshot paneli üretildi.** Ayrıntı: @TOPLAMA_RAPORU.md
+(`katilim/panel.py`, `python3 -m katilim.cli panel`, 0 istek).
+
+- **1.280 panel satırı** (1.276 bildirim × ticker ekseni), 539 pay kodu.
+  Ayrıştırma hatası 0, dosyası eksik 0.
+- **Karar iki sütun:** `karar` ÖZET alanından (H5 varsayılanı),
+  `karar_kalem_bazli` kalemlerden. Dağılım özet: 655 UYGUN_DEGIL /
+  582 UYGUN / 43 TOLERANSTA; kalem: 655 / 583 / 42.
+- **H5'in fiili sınama örneklemi n=1.** `h5_ayirt_edici` 19 satırda EVET
+  ama kararı çeviren tek kayıt var: **PNLSN 2025/6 Aylık** (özet %5,30
+  TOLERANSTA ↔ kalem %4,67 UYGUN). 4.0 bu satıra bakacak; tek gözlemle
+  H5 doğrulanmış sayılmayacak.
+- **Karantina silmez, işaretler:** 22 kayıt `karantina=EVET` ile panelde
+  duruyor. Silmek 22 şirketi sessizce düşürmek olurdu.
+- **Dönem anahtarı meta veriden**; formun kendi etiketi
+  `form_donem_etiketi` sütununda (20 satırda ayrışıyor, yıl hiç ayrışmıyor).
+- **Ticker artık dosya adından tahmin edilmiyor** — OKUBENI açığı kapandı.
+- **Tolerans zinciri YOK** (snapshot). Dönemler arası taşıma ve
+  `karar.py:187`'deki bozuk sıralama anahtarı 3.1'in işi.
 
 **Faz 1.3 bitti — parser 1.276 gerçek belgede doğrulandı.** Ayrıntı:
 @PILOT_20_RAPORU.md (betik: `arac/pilot_20.py`, 0 istek).
@@ -184,7 +210,7 @@ hata yok. 239 MB, `veri/ham/{TICKER}_{YIL}_{PERIYOT}_{bildirim_id}.html`.
    kaçırılan bildirim düzelmez.
 
 Zaman duyarlı olmayan her şey arşivin arkasına alındı:
-**1.2 ✔ → 1.4a ✔ → 1.3 ✔ → 1.4b → 1.1b → 2.0b → 4.0.**
+**1.2 ✔ → 1.4a ✔ → 1.3 ✔ → 1.4b ✔ → 1.1b → 2.0b → 4.0.**
 
 **Faz 1.2 bitti — ve zaman duyarlılığının yerini değiştirdi.**
 @BILDIRIM_GECMISI_RAPORU.md (651 istek / onaylı 800).

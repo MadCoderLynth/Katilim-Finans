@@ -9,8 +9,9 @@ Bu belge, her fazın Claude Code'a verilecek promptlarını içerir. Kaynaklar:
 2.0 derinlik keşfi ✔ (BULUNAMADI, pencere kayıyor) ·
 **1.2 bildirim sorguları ✔ — 1.276 KAFİF kimliği toplandı.**
 **1.4a form arşivi ✔** (1.276/1.276 form) · **1.3 parser kapısı ✔**
-(1.276 formda ayrıştırma hatası 0, 22 sapmanın 22'si teşhisli).
-106 test geçiyor. Sıradaki: **1.4b** (ayrıştırma + panel, ağ isteği yok).
+(ayrıştırma hatası 0, 22 sapmanın 22'si teşhisli) · **1.4b snapshot ✔**
+(1.280 panel satırı, H5 iki karar sütunuyla taşınıyor).
+118 test geçiyor. Sıradaki: **1.1b** (özet sayfaları, bütçe 800) → **4.0**.
 
 **1.1b ertelendi ve 1.3'ün kapısı yer değiştirdi (7 Ağu).** Şirket özet
 sayfaları kaymıyor, ne zaman çekilse aynı veriyi veriyor; KAFİF formları
@@ -544,7 +545,30 @@ sha256 yeniden hesaplandı, hepsi tuttu.
 
 ---
 
-## 1.4b — Ayrıştırma ve panel · **ağ isteği yok**
+## 1.4b — Ayrıştırma ve panel ✔ **BİTTİ (8 Ağu 2026)**
+
+Çıktı: `TOPLAMA_RAPORU.md` · `veri/panel/snapshot_20260808.csv`
+(1.280 satır × 25 sütun) · modül `katilim/panel.py` · **0 istek**.
+
+```
+1.276 form ayrıştırıldı · hata 0 · dosyası yok 0
+panel satırı 1.280 (539 pay kodu) · self-check GEÇTİ 1.258 / KALDI 22
+karar (ÖZET) : 655 UYGUN_DEGIL · 582 UYGUN · 43 TOLERANSTA
+karar (kalem): 655 UYGUN_DEGIL · 583 UYGUN · 42 TOLERANSTA
+```
+
+| Bulgu | Etkisi |
+|---|---|
+| **H5'in fiili sınama örneklemi n=1** | `h5_ayirt_edici` 19 satırda EVET ama kararı çeviren tek kayıt: PNLSN 2025/6 Aylık (özet TOLERANSTA ↔ kalem UYGUN) |
+| Karantina 22, panelden silinmedi | `karantina=EVET` sütunuyla duruyor; 4.0 süzecek |
+| Tek şablon imzası (1.280/1.280) | 2.2 tek etiket üretecek |
+| Ticker evren tablosundan | OKUBENI'nin "dosya adından tahmin" açığı kapandı |
+| Tolerans zinciri yok | Snapshot; dönemler arası taşıma 3.1'in işi |
+
+*1.4b promptu arşiv olarak duruyor.*
+
+<details>
+<summary>1.4b promptu (arşiv)</summary>
 
 ```
 Görev: 1.4a'nın arşivini ayrıştır, snapshot panelini üret.
@@ -588,8 +612,11 @@ maliyeti sıfır.
   karar dağılımı, şablon imzası dağılımı
 ```
 
-**Çıkış kriteri:** Muaf olmayan her şirket için ya en az bir kayıt ya
-`BEYAN_YOK`/`AYIRT_EDILEMEDI` işareti var. Karantina oranı raporlanmış.
+**Çıkış kriteri:** ✔ karşılandı — 795 pay kodunun hepsi sınıflı:
+539 panelde kayıtlı, 73 `BEYAN_YOK`, 33 `AYIRT_EDILEMEDI`, 150 `KAPSAM_DISI`.
+Karantina oranı raporlandı: 22/1.280 (%1,7), hepsi 1.3'te teşhisli.
+
+</details>
 
 ---
 
@@ -984,14 +1011,17 @@ DÖRT SINIF, ve üçü uyuşmazlık DEĞİL — bunları ayırmadan oran hesapla
 Yanlış pozitif (biz UYGUN, BIST dışarıda) ayrı raporlanır: uygunsuzu
 uygun göstermek, uygunu kaçırmaktan pahalıdır.
 
-H5 İÇİN AYRI SORGU — bu adımın en yüksek bilgi değerli parçası.
-`h5_ayirt_edici` işaretli 19 kayıt, özet-oranı ile kalem-oranının
-FARKLI sonuç öngördüğü tek örneklem. Bu satırlarda:
-- `karar` (özet bazlı) ile `karar_kalem_bazli` ayrışıyor mu?
-- Ayrışanlarda BIST'in fiili üyeliği hangisini destekliyor?
-Sonucu ayrı raporla ve n'i yaz. Kararı fiilen çeviren alt küme çok
-küçük olabilir (bilinen: PNLSN 2025/6 Aylık); **n≤2 ise H5
-"doğrulandı" YAZMA**, "tek gözlem tutarlı" yaz.
+H5'İ SINAMAYA ÇALIŞMA — örneklem yok (1.4b ölçümü). `h5_ayirt_edici`
+işaretli 19 kaydın yalnız 1'i farklı KARAR üretiyor (PNLSN 2025/6
+Aylık) ve o da geçersiz kılınmış bir düzeltme; 2.3 sonrası ayırt
+edici örneklem n=0. Raporda tek satır yeter: "H5 bu veriyle
+sınanamıyor, varsayılan (özet alanı) yanlışlanmamış yargı çağrısı
+olarak duruyor." Uydurma bir sonuç üretme.
+
+Bunun yerine ÖLÇ: `oran_ayrisiyor` işaretli kayıtların kaçı düzeltme
+(`is_duzeltme`) içeriyor? PNLSN'de sapmanın kaynağı şirketin kalemi
+düzeltip TOPLAM satırını güncellememesiydi. Bu örüntü genelse,
+"formun özeti bayat olabilir" bulgusu 2.3'ü ve ileride H5'i bağlar.
 
 Çıktı: ON_MUTABAKAT_{tarih}.md — dört sınıfın sayıları, gerçek
 uyuşmazlıkların listesi (ticker, kararımız, gerekçemiz, üyelik durumu),

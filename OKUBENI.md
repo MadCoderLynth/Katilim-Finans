@@ -132,8 +132,11 @@ olduğunu kanıtlamaz.** Gerçek doğrulama, elinizdeki bir `.html` dosyasıyla
   181 bildirimin **181'i** yakalandı, kaçırma yok. Sinyalin kaynağı sağlam:
   KAP sayfaya "Düzeltilmiş Bildirim" ve "Düzeltme Nedeni: …" basıyor.
   Ayrıntı: `PILOT_20_RAPORU.md` §4.
-- Ticker, dosya adından tahmin ediliyor; toplama katmanı (Faz 1) gelince
-  KAP member kimliğinden alınacak.
+- ~~Ticker, dosya adından tahmin ediliyor.~~ **KAPANDI (Faz 1.4b, 8 Ağu 2026).**
+  `katilim/panel.py` pay kodunu arşiv indeksinden, o da evren tablosundan
+  alıyor; evrende olmayan kod sessizce geçilmiyor, raporlanıyor (bu koşuda 0).
+  `cli.py`'deki `_ticker_tahmin` yalnız tek dosyalık `dogrula`/`dok`/`json`
+  komutları için duruyor — panel üretimi onu kullanmıyor.
 - BIST'in max(ort. PD, toplam varlık) paydası uygulanmıyor. KAFİF oranı bu
   oranın üst sınırı olduğu için %33 altındaki kararlar güvenli; %33–36,3
   bandında ikinci hesap gerekiyor (Spec §2.2).
