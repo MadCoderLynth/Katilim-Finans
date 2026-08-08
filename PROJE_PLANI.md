@@ -8,8 +8,9 @@ Bu belge, her fazın Claude Code'a verilecek promptlarını içerir. Kaynaklar:
 1.0 rota keşfi ✔ · 1.1 evren ✔ (795 ticker / 746 tüzel kişi) ·
 2.0 derinlik keşfi ✔ (BULUNAMADI, pencere kayıyor) ·
 **1.2 bildirim sorguları ✔ — 1.276 KAFİF kimliği toplandı.**
-**1.4a form arşivi ✔ — 1.276/1.276 form diskte.**
-97 test geçiyor. Sıradaki: **1.3** (20/20 parser kapısı, ağa çıkmaz).
+**1.4a form arşivi ✔** (1.276/1.276 form) · **1.3 parser kapısı ✔**
+(1.276 formda ayrıştırma hatası 0, 22 sapmanın 22'si teşhisli).
+106 test geçiyor. Sıradaki: **1.4b** (ayrıştırma + panel, ağ isteği yok).
 
 **1.1b ertelendi ve 1.3'ün kapısı yer değiştirdi (7 Ağu).** Şirket özet
 sayfaları kaymıyor, ne zaman çekilse aynı veriyi veriyor; KAFİF formları
@@ -381,7 +382,37 @@ filtresi 10 şirkette doğrulandı; üç durum (dolu / boş / okunamadı) kodda 
 
 ---
 
-## 1.3 — 20/20 parser kapısı · **ağ isteği yok** · 1.4a'dan SONRA
+## 1.3 — 20/20 parser kapısı ✔ **BİTTİ (8 Ağu 2026)**
+
+Çıktı: `PILOT_20_RAPORU.md` · fixture `tests/fixtures/pilot/` (20 JSON) ·
+`tests/test_pilot.py` (9 test). Betik `arac/pilot_20.py`. **Ağ isteği 0.**
+
+**Kapı geçildi.** Örneklemde 13 GEÇTİ / 7 KALDI; KALAN 7'nin 7'si teşhisli.
+Örneklem seçilmeden önce **arşivin tamamı** ayrıştırıldı:
+
+```
+1.276 form · ayrıştırma hatası 0 · self-check GEÇTİ 1.254 / KALDI 22 (%98,3)
+22 sapmanın 22'si teşhis edildi -> açıklanmamış karantina YOK
+```
+
+| Bulgu | Etkisi |
+|---|---|
+| 19 sapmada **formun kendi 4E TOPLAM satırı kalemleriyle tutmuyor** | Parser doğru; kaynak veri tutarsız. Kural 3'ün var olma sebebi |
+| 3 sapmada 4E=0 → oran tanımsız, form 0 basıyor | `None`≠0 korundu (kural 2'nin oran karşılığı) |
+| **Tek şablon imzası** (1.276/1.276) | 2.2 tek etiket üretecek; **2024 öncesi şablon SINANMADI** |
+| Her formda 55 kalem, 13/13 beyan | "Kısmen boş tablo" ölçütü satır sayısıyla ölçülemez; vekil: dolu kalem sayısı |
+| **`is_duzeltme` doğrulandı**: 181/181, kaçırma 0 | OKUBENI açığı kapandı; KAP "Düzeltme Nedeni" de basıyor (2.3'e girdi) |
+| Formun dönem etiketi meta veriden farklı (20/1.276) | Panel dönem anahtarı **meta veriden** alınmalı |
+
+**AÇIK KARAR (1.4b'ye taşındı):** 19 kayıtta iki oran var — bizim
+kalemlerden hesapladığımız ve formun özetindeki. En az biri kararı
+çeviriyor (PNLSN 2025/6 Aylık: 4,67 % UYGUN ↔ form 5,30 % aşım). Kod
+içinde seçilmedi; panelde ikisini birden taşımak önerildi.
+
+*1.3 promptu arşiv olarak duruyor.*
+
+<details>
+<summary>1.3 promptu (arşiv)</summary>
 
 > **Kapı yeri değişti (7 Ağu 2026).** Önce "1.3 geçmeden 1.4 koşulmaz"
 > yazıyordu, gerekçe "2.600 isteği doğrulanmamış parser'a harcamak pahalı".
@@ -423,8 +454,12 @@ Self-check kalırsa TOLERANS'ı gevşetme. `dok` ile sapmanın kaynağını bul.
 Teşhis edemediğin sapmayı karantinada bırak ve raporla — bu bir bulgudur.
 ```
 
-**Çıkış kriteri:** 20/20 self-check GEÇTİ, veya geçmeyen her kayıt için
-gerekçe yazılı ve karantinada. `tests/test_pilot.py` yeşil.
+**Çıkış kriteri:** ✔ karşılandı ikinci koldan — 20/20 GEÇTİ değil, ama
+geçmeyen 7 kaydın **her biri gerekçeli ve karantinada** (arşiv genelinde
+22/22 teşhisli). `tests/test_pilot.py` yeşil (9/9), 20/20 ham HTML'den
+yeniden ayrıştırıldı.
+
+</details>
 
 ---
 
@@ -514,8 +549,9 @@ sha256 yeniden hesaplandı, hepsi tuttu.
 ```
 Görev: 1.4a'nın arşivini ayrıştır, snapshot panelini üret.
 
-Ön koşul: 1.3 geçti (20/20). Bu kapı BURADA duruyor — panel, doğrulanmamış
-parser'ın çıktısıyla yayımlanmaz.
+Ön koşul: 1.3 ✔ (22 sapmanın 22'si teşhis edildi, açıklanmamış karantina
+yok). Bu kapı BURADA duruyor — panel, doğrulanmamış parser'ın çıktısıyla
+yayımlanmaz.
 
 Ağa çıkmaz; her şey diskten. Yanlış çıkarsa düzelt ve yeniden koş,
 maliyeti sıfır.
@@ -525,9 +561,29 @@ maliyeti sıfır.
   (OKUBENI.md "bilinen açıklar" maddesi kapanır)
 - Self-check kalan kayıt karantinaya; TOLERANS gevşetilmez
 
+İKİ KARAR 1.3'ten geldi, ikisi de burada uygulanır:
+
+1. HER İKİ ORAN TAŞINIR (H5, spec §2.3). 19 formda formun kendi 4E
+   TOPLAM'ı kalemleriyle tutmuyor ve iki oran ayrışıyor.
+   - `karar` sütunu ÖZET alanından üretilir (varsayılan; H5 kabul
+     edilmiş gibi). Gerekçe aritmetik değil, hata maliyeti: BIST özeti
+     kullanıyorsa ve biz kalemi kullanırsak PNLSN gibi vakada "UYGUN"
+     deriz ve BIST elemiştir → yanlış pozitif, pahalı olan hata.
+   - `*_orani_kalem` ve `*_orani_ozet` ayrı sütunlarda; `oran_ayrisiyor`
+     bayrağı ve `karar_kalem_bazli` ikinci karar sütunu.
+   - Bu 19 kayıt H5'in TEK ayırt edici örneklemi. `h5_ayirt_edici`
+     bayrağıyla işaretle ki 4.0 doğrudan sorgulayabilsin.
+
+2. DÖNEM ANAHTARI META VERİDEN. 1.276 formun 20'sinde formun kendi
+   etiketi meta veriden farklı ("Yıllık" → "4. 3 Aylık Bildirim" 13 kez,
+   "6 Aylık" → "2. 3 Aylık Bildirim" 7 kez); yıl hiç ayrışmıyor.
+   Formun kendi etiketi `form_donem_etiketi` olarak taşınır ama anahtar
+   değildir. Sıralama zaten gonderim_ts ile (3.1).
+
 Çıktı:
-- veri/panel/snapshot_{YYYYMMDD}.csv — ticker, yıl, periyot, üç oran,
-  karar, red kodları, self-check, bildirim_id, gonderim_ts
+- veri/panel/snapshot_{YYYYMMDD}.csv — ticker, yıl, periyot, altı oran
+  (kalem+özet), oran_ayrisiyor, h5_ayirt_edici, karar, karar_kalem_bazli,
+  red kodları, self-check, bildirim_id, gonderim_ts, is_duzeltme
 - TOPLAMA_RAPORU.md — şirket/bildirim sayıları, BEYAN_YOK, karantina,
   karar dağılımı, şablon imzası dağılımı
 ```
@@ -927,6 +983,15 @@ DÖRT SINIF, ve üçü uyuşmazlık DEĞİL — bunları ayırmadan oran hesapla
 
 Yanlış pozitif (biz UYGUN, BIST dışarıda) ayrı raporlanır: uygunsuzu
 uygun göstermek, uygunu kaçırmaktan pahalıdır.
+
+H5 İÇİN AYRI SORGU — bu adımın en yüksek bilgi değerli parçası.
+`h5_ayirt_edici` işaretli 19 kayıt, özet-oranı ile kalem-oranının
+FARKLI sonuç öngördüğü tek örneklem. Bu satırlarda:
+- `karar` (özet bazlı) ile `karar_kalem_bazli` ayrışıyor mu?
+- Ayrışanlarda BIST'in fiili üyeliği hangisini destekliyor?
+Sonucu ayrı raporla ve n'i yaz. Kararı fiilen çeviren alt küme çok
+küçük olabilir (bilinen: PNLSN 2025/6 Aylık); **n≤2 ise H5
+"doğrulandı" YAZMA**, "tek gözlem tutarlı" yaz.
 
 Çıktı: ON_MUTABAKAT_{tarih}.md — dört sınıfın sayıları, gerçek
 uyuşmazlıkların listesi (ticker, kararımız, gerekçemiz, üyelik durumu),

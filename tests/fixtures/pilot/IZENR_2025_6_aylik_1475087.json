@@ -1,0 +1,401 @@
+{
+ "_kaynak": {
+  "dosya": "IZENR_2025_6_aylik_1475087.html",
+  "bildirim_id": 1475087,
+  "ticker": "IZENR",
+  "unvan": "İZDEMİR ENERJİ ELEKTRİK ÜRETİM A.Ş.",
+  "sektor_vekili": "ENERJI",
+  "gerekce": [
+   "sektör çeşitliliği (ENERJI)"
+  ],
+  "pencere_disi": false
+ },
+ "beklenen": {
+  "sablon_imzasi": "4A|4B|4C|4D|4E|5F|5G|5H|6I|6J|OZET|S1|S2|S3",
+  "nitelik": "Konsolide Olmayan",
+  "kalem_sayisi": 55,
+  "dolu_beyan": 13,
+  "self_check": "GECTI",
+  "oranlar": {
+   "gelir": "1.01",
+   "varlik": "2.59",
+   "borc": "6.64"
+  },
+  "ozet_oranlar": {
+   "gelir": "1.01",
+   "varlik": "2.59",
+   "borc": "6.64"
+  },
+  "karar": "UYGUN_DEGIL",
+  "red_kodlari": [
+   "G2_IMTIYAZ"
+  ]
+ },
+ "bildirim": {
+  "bildirim_id": 1475087,
+  "ticker": "IZENR",
+  "gonderim_ts": "2025-08-08T18:17:44",
+  "yil": 2025,
+  "periyot": "6 Aylık",
+  "finansal_tablo_niteligi": "Konsolide Olmayan",
+  "para_birimi_carpani": 1,
+  "is_duzeltme": false,
+  "ozet_gelir_orani": "1.01",
+  "ozet_varlik_orani": "2.59",
+  "ozet_borc_orani": "6.64",
+  "beyanlar": {
+   "b1_1": false,
+   "b1_2": false,
+   "b2_1": true,
+   "b2_2": false,
+   "b3_1": false,
+   "b3_2": false,
+   "b4_1": false,
+   "b4_2": false,
+   "b4_3": false,
+   "b4_4": false,
+   "b4_5": false,
+   "b4_6": false,
+   "b4_7": false
+  },
+  "kalemler": [
+   {
+    "tablo": "4B",
+    "kalem_no": 1,
+    "kalem_adi": "Rehber madde 3.2.2 kapsamına girecek şekilde, sağlığa zararlı tütün ürünlerinin perakende satışı ve sunumundan elde edilen gelirlerin toplamı",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4B",
+    "kalem_no": 2,
+    "kalem_adi": "Rehber madde 3.2.3 kapsamına girecek şekilde, katılım finansı ilkelerine uygun faaliyet göstermeyen şirketlere sunulan iş ve hizmetlerden elde edilen gelirlerin toplamı",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4B",
+    "kalem_no": 3,
+    "kalem_adi": "Rehber madde 3.2.4 kapsamına girecek şekilde, katılım finansı ilkelerine uygun faaliyet göstermeyen şirketlerden elde edilen kira gelirlerinin toplamı",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4B",
+    "kalem_no": 4,
+    "kalem_adi": "Rehber madde 3.2.5 kapsamına girecek şekilde, reklam, marka, sponsorluk ve aracılık faaliyetlerinden elde edilen gelirlerin toplamı",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4C",
+    "kalem_no": 1,
+    "kalem_adi": "Esas Faaliyetlerden Diğer Gelirler",
+    "tutar_ham": "91497920"
+   },
+   {
+    "tablo": "4C",
+    "kalem_no": 2,
+    "kalem_adi": "Finansman Gelirleri",
+    "tutar_ham": "32355493"
+   },
+   {
+    "tablo": "4C",
+    "kalem_no": 3,
+    "kalem_adi": "Yatırım Faaliyetlerinden Gelirler",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4C",
+    "kalem_no": 4,
+    "kalem_adi": "Finans Sektörü Faaliyetleri Hasılatı",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4C",
+    "kalem_no": 5,
+    "kalem_adi": "Özkaynak Yöntemiyle Değerlenen Yatırımların Karlarından (Zararlarından) Paylar",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 1,
+    "kalem_adi": "Fiyat farkı gelirleri (C tablosunda sayılan kalemlerde muhasebeleştirilmiş kısmı)",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 2,
+    "kalem_adi": "Kur farkı gelirleri (C tablosunda sayılan kalemlerde muhasebeleştirilmiş kısmı)",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 3,
+    "kalem_adi": "Vade farkı gelirleri (C tablosunda sayılan kalemlerde muhasebeleştirilmiş kısmı)",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 4,
+    "kalem_adi": "Kur Korumalı Katılım hesapları dahil katılım esaslı kıymetlerden ve fonlardan elde edilen gelirler",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 5,
+    "kalem_adi": "SGK prim gelirleri",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 6,
+    "kalem_adi": "Katılım bankalarından alınan promosyon gelirleri",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 7,
+    "kalem_adi": "Müşteri peşinatları irad kaydı (C tablosunda sayılan kalemlerde muhasebeleştirilmiş kısmı)",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 8,
+    "kalem_adi": "Konusu kalmayan karşılıklar",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 9,
+    "kalem_adi": "Hizmet gelirleri (C tablosunda sayılan kalemlerde muhasebeleştirilmiş kısmı)",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 10,
+    "kalem_adi": "Kira ve bakım onarım gelirleri (C tablosunda sayılan kalemlerde muhasebeleştirilmiş kısmı)",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 11,
+    "kalem_adi": "Ardiye gelirleri (C tablosunda sayılan kalemlerde muhasebeleştirilmiş kısmı)",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 12,
+    "kalem_adi": "Tazminat ve gecikme ceza gelirleri",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 13,
+    "kalem_adi": "Sigorta hasar tazminat gelirleri",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 14,
+    "kalem_adi": "Dava gelirleri",
+    "tutar_ham": "69201315"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 15,
+    "kalem_adi": "Katılım Finansı İlkelerine uygun faaliyet gösteren şirketlerden elde edilen temettü gelirleri",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4D",
+    "kalem_no": 16,
+    "kalem_adi": "Yukarıdaki kalemlerde yer verilmeyen ancak Katılım Finansı İlkelerine uygun sayılan diğer gelirlerin toplamı (C tablosunda sayılan kalemlerde muhasebeleştirilmiş kısmı)",
+    "tutar_ham": "15307997"
+   },
+   {
+    "tablo": "4E",
+    "kalem_no": 1,
+    "kalem_adi": "Hasılat",
+    "tutar_ham": "3753538095"
+   },
+   {
+    "tablo": "4E",
+    "kalem_no": 2,
+    "kalem_adi": "Esas Faaliyetlerden Diğer Gelirler",
+    "tutar_ham": "91497920"
+   },
+   {
+    "tablo": "4E",
+    "kalem_no": 3,
+    "kalem_adi": "Finansman Gelirleri",
+    "tutar_ham": "32355493"
+   },
+   {
+    "tablo": "4E",
+    "kalem_no": 4,
+    "kalem_adi": "Yatırım Faaliyetlerinden Gelirler",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4E",
+    "kalem_no": 5,
+    "kalem_adi": "Finans Sektörü Faaliyetleri Hasılatı",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "4E",
+    "kalem_no": 6,
+    "kalem_adi": "Özkaynak Yöntemiyle Değerlenen Yatırımların Karlarından Paylar",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "5F",
+    "kalem_no": 1,
+    "kalem_adi": "Nakit ve Nakit Benzerleri",
+    "tutar_ham": "74855723"
+   },
+   {
+    "tablo": "5F",
+    "kalem_no": 2,
+    "kalem_adi": "Finansal Yatırımlar (Dönen ve Duran Varlıklarda Sınıflandırılanların Toplamı)",
+    "tutar_ham": "351763575"
+   },
+   {
+    "tablo": "5F",
+    "kalem_no": 3,
+    "kalem_adi": "Türev Araçlar (Dönen ve  Duran Varlıklarda Sınıflandırılanların Toplamı)",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "5F",
+    "kalem_no": 4,
+    "kalem_adi": "Finans Sektörü Faaliyetlerinden Alacaklar (Dönen ve Duran Varlıklarda Sınıflandırılanların Toplamı)",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "5F",
+    "kalem_no": 5,
+    "kalem_adi": "Özkaynak Yöntemiyle Değerlenen Yatırımlar",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "5F",
+    "kalem_no": 6,
+    "kalem_adi": "İştirakler, İş Ortaklıkları ve Bağlı Ortaklıklardaki Yatırımlar",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "5G",
+    "kalem_no": 1,
+    "kalem_adi": "Çekler",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "5G",
+    "kalem_no": 2,
+    "kalem_adi": "Kasa",
+    "tutar_ham": "6857"
+   },
+   {
+    "tablo": "5G",
+    "kalem_no": 3,
+    "kalem_adi": "Vadesiz mevduat hesapları",
+    "tutar_ham": "13548866"
+   },
+   {
+    "tablo": "5G",
+    "kalem_no": 4,
+    "kalem_adi": "Katılım esaslı yatırım araçlarındaki (kira sertifikası, sukuk, kur korumalı dahil katılım bankalarında tutulan hesaplar) tutarlar",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "5G",
+    "kalem_no": 5,
+    "kalem_adi": "Katılım Finansı İlkelerine uygun faaliyet gösteren iştirakler ve bağlı ortaklıklardaki şirket payları",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "5G",
+    "kalem_no": 6,
+    "kalem_adi": "Kredi kartı alacakları",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "5G",
+    "kalem_no": 7,
+    "kalem_adi": "Yukarıdaki kalemlerde yer verilmeyen ancak Katılım Finansı İlkelerine uygun sayılan diğer varlıkların toplamı (F tablosunda sayılan mali tablo kalemlerinde muhasebeleştirilmiş kısmı)",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "5H",
+    "kalem_no": null,
+    "kalem_adi": "Toplam Varlıklar",
+    "tutar_ham": "15951952766"
+   },
+   {
+    "tablo": "6I",
+    "kalem_no": 1,
+    "kalem_adi": "Kısa Vadeli Borçlanmalar",
+    "tutar_ham": "4832971"
+   },
+   {
+    "tablo": "6I",
+    "kalem_no": 2,
+    "kalem_adi": "Uzun Vadeli Borçlanmaların Kısa Vadeli Kısımları",
+    "tutar_ham": "242804883"
+   },
+   {
+    "tablo": "6I",
+    "kalem_no": 3,
+    "kalem_adi": "Uzun Vadeli Borçlanmalar",
+    "tutar_ham": "817422129"
+   },
+   {
+    "tablo": "6I",
+    "kalem_no": 4,
+    "kalem_adi": "Türev Araçlar   (Kısa ve Uzun Vadeli Yükümlülüklerde Sınıflandırılanların Toplamı)",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "6I",
+    "kalem_no": 5,
+    "kalem_adi": "Finans Sektörü Faaliyetlerinden Borçlar (Kısa ve Uzun Vadeli Yükümlülüklerde Sınıflandırılanların Toplamı)",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "6I",
+    "kalem_no": 6,
+    "kalem_adi": "Diğer Borçlar  (Kısa ve Uzun Vadeli Yükümlülüklerde Sınıflandırılanların Toplamı)",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "6J",
+    "kalem_no": 1,
+    "kalem_adi": "Kiralama işlemlerinden borçlar (Kısa ve Uzun Vadeli Yükümlülüklerde Sınıflandırılanların Toplamı)",
+    "tutar_ham": "6211749"
+   },
+   {
+    "tablo": "6J",
+    "kalem_no": 2,
+    "kalem_adi": "Katılım bankalarından alınmış krediler",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "6J",
+    "kalem_no": 3,
+    "kalem_adi": "Kira sertifikası, sukuk vb. faizsiz finansal araçlarda yapılmış ihraçlar",
+    "tutar_ham": "0"
+   },
+   {
+    "tablo": "6J",
+    "kalem_no": 4,
+    "kalem_adi": "Yukarıdaki kalemlerde yer verilmeyen ancak Katılım Finansı İlkelerine uygun sayılan diğer borçların toplamı (I tablosunda sayılan mali tablo kalemlerinde muhasebeleştirilmiş kısmı)",
+    "tutar_ham": "0"
+   }
+  ],
+  "aciklamalar": {
+   "madde_16": "Dengeden sorumlu grup tasarrufu geliri, Hurda satışları, Yansıtılan enerji satış masrafları.",
+   "madde_7": "",
+   "madde_4": "Ödenecek vergi."
+  },
+  "sablon_imzasi": "4A|4B|4C|4D|4E|5F|5G|5H|6I|6J|OZET|S1|S2|S3",
+  "raw_sha256": "5c58d9d139d6d1ac5493297f40a4030b5ce42faf938e2df73092002ad10185e0"
+ }
+}

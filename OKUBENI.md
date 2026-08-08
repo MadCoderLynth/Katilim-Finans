@@ -127,8 +127,11 @@ olduğunu kanıtlamaz.** Gerçek doğrulama, elinizdeki bir `.html` dosyasıyla
 
 ## Bilinen açıklar
 
-- `is_duzeltme` tespiti sayfa metninde "düzeltme" araması yapıyor; gerçek bir
-  düzeltme bildirimiyle doğrulanmadı.
+- ~~`is_duzeltme` tespiti doğrulanmadı.~~ **KAPANDI (Faz 1.3, 8 Ağu 2026).**
+  1.276 formda sınandı: aynı (ticker, yıl, dönem) grubunun ilki olmayan
+  181 bildirimin **181'i** yakalandı, kaçırma yok. Sinyalin kaynağı sağlam:
+  KAP sayfaya "Düzeltilmiş Bildirim" ve "Düzeltme Nedeni: …" basıyor.
+  Ayrıntı: `PILOT_20_RAPORU.md` §4.
 - Ticker, dosya adından tahmin ediliyor; toplama katmanı (Faz 1) gelince
   KAP member kimliğinden alınacak.
 - BIST'in max(ort. PD, toplam varlık) paydası uygulanmıyor. KAFİF oranı bu

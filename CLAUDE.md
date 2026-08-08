@@ -13,6 +13,7 @@ Detaylar: @BIST_Katilim_Uygunluk_Motoru_Spesifikasyonu_v0.1.md ve @OKUBENI.md
 ```bash
 python3 tests/test_motor.py                              # 22 test, pytest gerektirmez
 python3 tests/test_cekici.py                             # 9 test, çekim katmanı (ağa çıkmaz)
+python3 tests/test_pilot.py                              # 9 test, 20 gerçek KAP belgesi (kanıt katmanı)
 python3 -m katilim.cli bildirimler --butce 800            # KAFİF kimlikleri (Faz 1.2)
 python3 -m katilim.cli indir --butce 2600                 # formları arşivle (Faz 1.4a)
 python3 -m katilim.cli dogrula veri/ham/DOSYA.html        # ayrıştır + self-check + karar
@@ -81,6 +82,12 @@ Karar motorunda kural olarak kodlu ama **kanıtlanmamış** (spec §2.3):
 - **H2:** Kâr payı imtiyazı, tasfiye payı imtiyazıyla aynı ağırlıkta eler.
 - **H3:** BIST payda olarak max(ort. PD, toplam varlık) kullanıyor.
 - **H4:** Tolerans durumu şirket bazında, kriter bazında değil.
+- **H5:** BIST formun **özet alanındaki** oranı kullanıyor, kalemlerden
+  yeniden hesaplananı değil. → 1.3'te 19 formda ikisi ayrışıyor; en az
+  birinde (PNLSN 2025/6 Aylık) karar çeviriyor. **Varsayılan: özet alanı**
+  — aritmetik doğruluk yüzünden değil, hata maliyeti asimetrisi yüzünden.
+  Kalem bazlı oran panelde ikinci sütun olarak taşınır; o 19 kayıt H5'in
+  tek ayırt edici örneklemi, 4.0'da ayrı bakılır.
 
 Bunlar ancak **Faz 4** (kararlarımız vs. resmi XKTUM bileşen listeleri) ile
 sınanabilir. Faz 4 öncesinde üretilen panel araştırma çıktısıdır, karar dayanağı
@@ -105,12 +112,40 @@ onunla çelişirse plan değil bu dosya esastır.
 ### Nerede kaldık (7 Ağu 2026)
 
 Biten: **Faz 0** · **1.0** rota keşfi · **1.1** evren · **2.0** derinlik
-keşfi · **1.2** bildirim sorguları · **1.4a** form arşivi.
-Testler: 97 geçiyor (22 motor + 9 çekici + 23 evren + 8 derinlik +
-15 bildirim + 7 rsc + 13 toplayıcı).
+keşfi · **1.2** bildirim sorguları · **1.4a** form arşivi · **1.3** parser kapısı.
+Testler: 106 geçiyor (22 motor + 9 çekici + 23 evren + 8 derinlik +
+15 bildirim + 7 rsc + 13 toplayıcı + 9 pilot).
 
-Sıradaki: **1.3** — 20/20 parser kapısı. Artık **ağa çıkmadan** koşulabilir:
-1.276 formun tamamı `veri/ham/` altında. Ayrıntı: @INDIRME_RAPORU.md.
+Sıradaki: **1.4b** — arşivi ayrıştır, snapshot panelini üret. Ağ isteği yok.
+
+**Faz 1.3 bitti — parser 1.276 gerçek belgede doğrulandı.** Ayrıntı:
+@PILOT_20_RAPORU.md (betik: `arac/pilot_20.py`, 0 istek).
+
+- **Ayrıştırma hatası 0/1.276.** Self-check 1.254 GEÇTİ / 22 KALDI (%98,3);
+  **22'sinin 22'si teşhis edildi**, açıklanmamış karantina yok.
+- **KALAN kayıtların sebebi parser DEĞİL.** 19'unda formun kendi 4E TOPLAM
+  satırı kendi kalemleriyle tutmuyor (özet oran o TOPLAM'dan hesaplanmış);
+  3'ünde 4E=0, yani oran tanımsız ama form 0 basıyor. **Kural 3'ün var
+  olma sebebi tam olarak bu** — TOPLAM satırını parse etseydik 19 form
+  sessizce "tutarlı" görünecekti.
+- **Tek şablon imzası** (1.276/1.276): `4A|4B|4C|4D|4E|5F|5G|5H|6I|6J|OZET|S1|S2|S3`.
+  2.2 bu veriyle tek etiket üretecek. **2024 öncesi şablon SINANMADI** —
+  bu pencereden çekilemiyor, "sınandı" sayılmıyor.
+- **Her formda 55 kalem ve 13/13 beyan dolu.** Yani "tabloları kısmen boş
+  küçük şirket" ölçütü satır sayısıyla ölçülemez; vekil ölçüt *dolu (sıfır
+  olmayan) kalem sayısı* (en uç: ISGYO, 55'in 1'i dolu).
+- **`is_duzeltme` DOĞRULANDI**, OKUBENI açığı kapandı: 181/181 yakalandı,
+  kaçırma yok. KAP sayfaya "Düzeltilmiş Bildirim" + "Düzeltme Nedeni: …"
+  basıyor; ikincisi 2.3 için değerli, modelde alanı yok.
+- **Formun dönem etiketi meta veriden farklı olabiliyor** (20/1.276):
+  "Yıllık" → "4. 3 Aylık Bildirim" (13), "6 Aylık" → "2. 3 Aylık Bildirim" (7).
+  Yıl hiç ayrışmıyor. **Panel dönem anahtarı meta veriden alınmalı.**
+
+**AÇIK KARAR — hangi oran karara girer.** 19 kayıtta iki oran var: bizim
+kalemlerden hesapladığımız ve formun özetindeki. En az birinde fark kararı
+çeviriyor (PNLSN 2025/6 Aylık: 4,67 % → UYGUN, form 5,30 % → aşım). BIST
+beyan esaslı çalıştığı için özet alanı kullanıyor olabilir. Kod içinde
+seçilmedi; panelde her iki oranın da taşınması önerildi (1.4b).
 
 **Faz 1.4a bitti — arşiv tam.** 1.276/1.276 form indi, eksik yok, kalıcı
 hata yok. 239 MB, `veri/ham/{TICKER}_{YIL}_{PERIYOT}_{bildirim_id}.html`.
@@ -149,7 +184,7 @@ hata yok. 239 MB, `veri/ham/{TICKER}_{YIL}_{PERIYOT}_{bildirim_id}.html`.
    kaçırılan bildirim düzelmez.
 
 Zaman duyarlı olmayan her şey arşivin arkasına alındı:
-**1.2 ✔ → 1.4a ✔ → 1.3 → 1.4b → 1.1b → 2.0b → 4.0.**
+**1.2 ✔ → 1.4a ✔ → 1.3 ✔ → 1.4b → 1.1b → 2.0b → 4.0.**
 
 **Faz 1.2 bitti — ve zaman duyarlılığının yerini değiştirdi.**
 @BILDIRIM_GECMISI_RAPORU.md (651 istek / onaylı 800).

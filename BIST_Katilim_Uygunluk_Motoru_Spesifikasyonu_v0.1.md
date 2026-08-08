@@ -175,6 +175,11 @@ Aşağıdakiler kural olarak kodlanacak ama **doğrulanmamış** kabul edilecek,
 - **H2:** Kâr payı imtiyazı, tasfiye payı imtiyazı ile aynı ağırlıkta eleme sebebidir.
 - **H3:** BIST payda olarak gerçekten max(PD, TV) kullanıyor.
 - **H4:** Tolerans durumu şirket bazında, kriter bazında değil.
+- **H5:** BIST, formun **özet alanındaki** oranı kullanıyor; alt kalemlerden yeniden hesaplanan oranı değil. (Faz 1.3 ölçümü: 1.276 formun 19'unda formun kendi 4E TOPLAM satırı kendi kalemleriyle tutmuyor, ikisi farklı oran üretiyor. Standart beyan esaslı işlediği için BIST'in beyan edilen özeti kullanması muhtemel — ama doğrulanmadı.)
+
+**H5 için ayrıcalıklı bir sınama imkânı var.** O 19 kayıt, iki hipotezin *farklı sonuç öngördüğü* doğal deneydir; başka hiçbir kayıt ayırt edici değildir. Faz 4/4.0'da bu satırlara ayrı bakılır. Uyarı: kararı fiilen çeviren alt küme çok daha küçük (bilinen: PNLSN 2025/6 Aylık, 4,67 % → UYGUN vs. 5,30 % → aşım), yani sınama n≈1-2 olabilir; tek gözlemle H5 "doğrulandı" sayılmaz.
+
+**Varsayılan seçim ve gerekçesi.** Karar sütunu **özet alanından** üretilir (H5 kabul edilmiş gibi), kalem bazlı oran ikinci sütunda taşınır. Gerekçe aritmetik değil hata maliyeti asimetrisi: BIST özeti kullanıyorsa ve biz kalemi kullanırsak PNLSN gibi vakalarda "UYGUN" deriz, BIST elemiştir → **yanlış pozitif**, uygunsuz hisseyi uygun göstermek. Tersi durumda gereksiz eleme yaparız → kaçırılan fırsat, ucuz olan hata.
 
 ---
 
