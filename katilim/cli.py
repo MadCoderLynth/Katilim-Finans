@@ -452,6 +452,98 @@ def cmd_panel(args) -> int:
     return 1 if (rapor.hatali or rapor.dosyasi_yok) else 0
 
 
+def cmd_ozet(args) -> int:
+    """Faz 1.1b — özet sayfalarından pazar / sektör / endeks üyeliği."""
+    from . import ozet
+    from .cekici import BütçeAşıldı, HızSınırlayıcı, Çekici
+
+    sirketler = evren.oku(args.evren_csv)
+    if not sirketler:
+        print(f"{args.evren_csv} yok. Önce: python -m katilim.cli evren --yenile",
+              file=sys.stderr)
+        return 2
+
+    cekici = Çekici(
+        args.onbellek,
+        sinirlayici=HızSınırlayıcı(
+            min_aralik=args.aralik, jitter=1.0, oturum_butcesi=args.butce
+        ),
+    )
+
+    def ilerleme(sira, toplam, durum):
+        if sira % args.her == 0 or sira == toplam:
+            print(f"  [{sira:4d}/{toplam}] {'/'.join(durum.tickerlar):12s} "
+                  f"{durum.durum:14s} pazar={durum.pazar or '-':12s} "
+                  f"endeks={durum.endeks_sayisi:2d} (ağ: {cekici.istatistik['ag']})",
+                  flush=True)
+
+    def kontrol_noktasi(t):
+        ozet.durumlari_yaz(t, args.durum_csv)
+        ozet.endeks_uyeligi_yaz(t, args.endeks_csv)
+
+    kesildi = None
+    try:
+        toplama = ozet.ozetleri_topla(
+            sirketler, cekici, ilerleme=ilerleme, kontrol_noktasi=kontrol_noktasi
+        )
+    except BütçeAşıldı as e:
+        kesildi = str(e)
+        print(f"\nBÜTÇE AŞILDI: {e}", file=sys.stderr)
+        print("Kısmi sonuç diskte; bütçeyi bilinçli yükseltip tekrar koşun.",
+              file=sys.stderr)
+        return 2
+
+    yazilan = ozet.evrene_bas(sirketler, toplama)
+
+    # 33 belirsiz muafiyeti sektör alanıyla yeniden değerlendir.
+    # Kapatılamayan MUAF İŞARETLENMEZ: yanlış muafiyet şirketi panelden
+    # sessizce düşürür, fazladan sorgulamak yalnız istek harcar.
+    yeniden = ozet.belirsizleri_yeniden_degerlendir(sirketler)
+    evren.yaz(sirketler, args.evren_csv)
+    ozet.endeks_uyeligi_yaz(toplama, args.endeks_csv)
+    ozet.durumlari_yaz(toplama, args.durum_csv)
+
+    dagilim: dict[str, int] = {}
+    for d in toplama.durumlar:
+        dagilim[d.durum] = dagilim.get(d.durum, 0) + 1
+    pazarlar: dict[str, int] = {}
+    for p in toplama.pazarlar.values():
+        pazarlar[p or "(yok)"] = pazarlar.get(p or "(yok)", 0) + 1
+
+    print(f"\nÖZET SAYFALARI -> {args.evren_csv}")
+    print(f"  tüzel kişi        : {len(toplama.durumlar)}  (pay koduna yazılan: {yazilan})")
+    print(f"  durum             : {dagilim}")
+    print(f"  pazar dağılımı    : {dict(sorted(pazarlar.items(), key=lambda kv: -kv[1]))}")
+    print(f"  endeks satırı     : {sum(len(v) for v in toplama.endeksler.values())} "
+          f"-> {args.endeks_csv}")
+    katilim_kod = {
+        t for t, e in toplama.endeksler.items()
+        if any("KATILIM" in x.upper() for x in e)
+    }
+    print(f"  KATILIM endeksinde: {len(katilim_kod)} pay kodu")
+    print(f"  istek             : {cekici.istatistik}")
+
+    if yeniden:
+        kapanan = [x for x in yeniden if x[2] is not None]
+        kalan = [x for x in yeniden if x[2] is None]
+        print(f"\nBELİRSİZ MUAFİYET: {len(yeniden)} -> kapanan {len(kapanan)}, "
+              f"kalan {len(kalan)}")
+        for s, _eski, yeni, gerekce in kapanan:
+            print(f"  {s.ticker:7s} -> {'MUAF' if yeni else 'MUAF DEĞİL'}: {gerekce}")
+        for s, _eski, _yeni, gerekce in kalan:
+            print(f"  {s.ticker:7s} -> BELİRSİZ: {gerekce}")
+    if toplama.uyarilar:
+        print(f"\nUYARI ({len(toplama.uyarilar)}):", file=sys.stderr)
+        for u in toplama.uyarilar[:20]:
+            print(f"  {u}", file=sys.stderr)
+
+    kotu = sum(
+        dagilim.get(k, 0)
+        for k in (ozet.DURUM_OKUNAMADI, ozet.DURUM_CEKIM_HATASI, ozet.DURUM_SLUG_YOK)
+    )
+    return 1 if (kotu or kesildi) else 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="katilim", description=__doc__)
     alt = p.add_subparsers(dest="komut", required=True)
@@ -511,6 +603,17 @@ def main(argv=None) -> int:
     sp.add_argument("--csv", default=None,
                     help="çıktı yolu (varsayılan: veri/panel/snapshot_{bugün}.csv)")
     sp.set_defaults(fn=cmd_panel)
+
+    sp = alt.add_parser("ozet")
+    sp.add_argument("--evren-csv", default=str(evren.EVREN_CSV))
+    sp.add_argument("--endeks-csv", default="veri/evren/endeks_uyeligi.csv")
+    sp.add_argument("--durum-csv", default="veri/evren/ozet_durumu.csv")
+    sp.add_argument("--onbellek", default="veri/onbellek")
+    sp.add_argument("--butce", type=int, default=800, help="oturum istek bütçesi")
+    sp.add_argument("--aralik", type=float, default=2.0,
+                    help="istekler arası asgari saniye (düşürmeyin)")
+    sp.add_argument("--her", type=int, default=50, help="kaç şirkette bir ilerleme bas")
+    sp.set_defaults(fn=cmd_ozet)
 
     args = p.parse_args(argv)
     return args.fn(args)

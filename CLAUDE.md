@@ -17,6 +17,7 @@ python3 tests/test_pilot.py                              # 9 test, 20 gerçek KA
 python3 -m katilim.cli bildirimler --butce 800            # KAFİF kimlikleri (Faz 1.2)
 python3 -m katilim.cli indir --butce 2600                 # formları arşivle (Faz 1.4a)
 python3 -m katilim.cli panel                              # snapshot paneli (Faz 1.4b)
+python3 -m katilim.cli ozet --butce 800                   # pazar/sektör/endeks (Faz 1.1b)
 python3 -m katilim.cli dogrula veri/ham/DOSYA.html        # ayrıştır + self-check + karar
 python3 -m katilim.cli dok veri/ham/DOSYA.html            # tanı: tabloları imzalarıyla dök
 python3 -m katilim.cli toplu veri/ham --csv veri/panel/panel.csv
@@ -117,12 +118,37 @@ onunla çelişirse plan değil bu dosya esastır.
 
 Biten: **Faz 0** · **1.0** rota keşfi · **1.1** evren · **2.0** derinlik
 keşfi · **1.2** bildirim sorguları · **1.4a** form arşivi · **1.3** parser
-kapısı · **1.4b** snapshot paneli.
-Testler: 118 geçiyor (22 motor + 9 çekici + 23 evren + 8 derinlik +
-15 bildirim + 7 rsc + 13 toplayıcı + 9 pilot + 12 panel).
+kapısı · **1.4b** snapshot paneli · **1.1b** özet sayfaları.
+Testler: 138 geçiyor (22 motor + 9 çekici + 23 evren + 8 derinlik +
+15 bildirim + 7 rsc + 13 toplayıcı + 9 pilot + 12 panel + 20 özet).
 
-Sıradaki: **1.1b** (özet sayfaları, bütçe 800) — 4.0'ın girdisi olan
-`endeks_uyeligi.csv` oradan geliyor. Ardından **4.0** (ön mutabakat).
+Sıradaki: **4.0** (nokta-zaman ön mutabakat, ağ isteği yok). Girdileri
+hazır: `veri/panel/snapshot_20260808.csv` + `veri/evren/endeks_uyeligi.csv`.
+
+**Faz 1.1b bitti — pazar, sektör, endeks üyeliği evrende.** Ayrıntı:
+@OZET_RAPORU.md (`katilim/ozet.py`, `python3 -m katilim.cli ozet`).
+
+- **746/746 özet sayfası çekildi.** pazar 793/795 pay kodunda dolu, sektör
+  643/795. `endeks_uyeligi.csv`: 5.161 satır / 605 pay kodu, **`olcum_tarihi`
+  her satırda dolu** (bu tablo bugünün fotoğrafı, tarihsel DEĞİL).
+- **BIST KATILIM TÜM üyesi 243 pay kodu** — 4.0'ın referans tarafı.
+  Panelle join tutuyor (232 ortak); mutabakat 4.0'ın işi.
+- **Pazar sözlüğü spec §0.4'ün varsaydığından geniş:** Yıldız/Ana/Alt
+  dışında nitelikli yatırımcı pazarı, piyasa öncesi platform, yakın izleme,
+  gözaltı, emtia da var (25 değer/kombinasyon) ve **bir kod birden çok
+  pazarda** olabiliyor. XKTUM ön şartını sağlayan: 605 pay kodu.
+- **Belirsiz muafiyet 33 → 27.** 6 menkul kıymet yatırım ortaklığı kapandı
+  (§0.4'te birebir yazılı; altısının da KAFİF'i yok, veri düşmedi).
+  Kalan 26 varlık kiralama (sukuk SPV, sektör alanı boş) + KTLEV **MUAF
+  İŞARETLENMEDİ**.
+- **`BütçeAşıldı` tetiklendi ve karar noktası olarak işletildi:** 800 doldu,
+  400 ek bütçe onayla alındı. Yeniden denemeler de bütçeden düşüyor
+  (604 çekim + 196 deneme = 800).
+
+**AÇIK KARAR — KTLEV.** Sektörü `MALİ KURULUŞLAR / FİNANSMAN ŞİRKETLERİ`;
+spec §0.4'ün muafiyet listesinde tasarruf finansman yok ama KTLEV hiç KAFİF
+vermemiş. Ya §0.4'e madde eklenecek ya da "muaf değil ama beyan vermiyor"
+(mevcut `BEYAN_YOK`) durumuna alınacak. Önerim ikincisi; seçilmedi.
 
 **Faz 1.4b bitti — snapshot paneli üretildi.** Ayrıntı: @TOPLAMA_RAPORU.md
 (`katilim/panel.py`, `python3 -m katilim.cli panel`, 0 istek).
@@ -210,7 +236,7 @@ hata yok. 239 MB, `veri/ham/{TICKER}_{YIL}_{PERIYOT}_{bildirim_id}.html`.
    kaçırılan bildirim düzelmez.
 
 Zaman duyarlı olmayan her şey arşivin arkasına alındı:
-**1.2 ✔ → 1.4a ✔ → 1.3 ✔ → 1.4b ✔ → 1.1b → 2.0b → 4.0.**
+**1.2 ✔ → 1.4a ✔ → 1.3 ✔ → 1.4b ✔ → 1.1b ✔ → 2.0b → 4.0.**
 
 **Faz 1.2 bitti — ve zaman duyarlılığının yerini değiştirdi.**
 @BILDIRIM_GECMISI_RAPORU.md (651 istek / onaylı 800).
@@ -328,7 +354,7 @@ Karara bağlananlar:
    şartı olduğu için (spec §0.4) ikinci kaynak gerekiyor — henüz bulunmadı.
 
 **Bütçe hâlâ karar noktasıdır.** Ölçülen maliyet ~3,2 sn/istek. Onaylanmış
-bütçeler: 1.1 → 5, 1.1b → 800, 1.2 → 800, 1.3 → 30, 2.0 → 30 (bitti, 22
+bütçeler: 1.1 → 5, 1.1b → 800 + 400 ek (bitti, ~956 deneme), 1.2 → 800, 1.3 → 30, 2.0 → 30 (bitti, 22
 kullanıldı), 1.4 → 2.600. Bunlar plan adımı başına ayrı ayrı verilir;
 `BütçeAşıldı` bir arıza değil, sorulacak bir sorudur — kodun içinden otomatik
 büyütmeyin.

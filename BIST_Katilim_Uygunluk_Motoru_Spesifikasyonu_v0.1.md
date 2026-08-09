@@ -54,7 +54,26 @@ Rehber madde 3.1'in başlığı zaten *"Şirketi Doğrudan Katılım Finansı İ
 | Mali sektör muafiyeti | Sektör sınıflaması | Muaf şirket "eksik veri" değil, "kapsam dışı" |
 | Likidite / halka açık PD sıralaması | BIST verisi | XK30/50/100 alt endeksleri için |
 
-**Muafiyet listesi (KAFİF doldurmayan):** aracı kurumlar, bankalar, emeklilik şirketleri, finansal kiralama ve faktoring şirketleri, menkul kıymet yatırım ortaklıkları, sigorta şirketleri, varlık yönetim şirketleri. Holding ve GSYO **dahil** — onlar dolduruyor. (Doğrulandı: KTLEV bir tasarruf finansman şirketi ve KAFİF sayfası "Bilgi Mevcut Değil" dönüyor.)
+**Muafiyet listesi (KAFİF doldurmayan):** aracı kurumlar, bankalar, emeklilik şirketleri, finansal kiralama ve faktoring şirketleri, menkul kıymet yatırım ortaklıkları, sigorta şirketleri, varlık yönetim şirketleri, **tasarruf finansman şirketleri**. Holding ve GSYO **dahil** — onlar dolduruyor.
+
+> ### ⚠ MUAF ≠ ELENMİŞ — modelleme boşluğu (1.1b ölçümü, 8 Ağu 2026)
+>
+> Bu belge örtük olarak "KAFİF vermeyen şirket endeks dışıdır" varsayıyordu. **Yanlışlandı.** XKTUM'un 243 üyesinin 11'i panelimizde hiç yok:
+>
+> | Ticker | Bizdeki durum | Not |
+> |---|---|---|
+> | ALBRK, ALK | `KAPSAM_DISI` (banka) | Albaraka — **katılım bankası** |
+> | KTLEV | `AYIRT_EDILEMEDI` | Katılımevim — **katılım esaslı tasarruf finansman**; KATILIM 30/50/100/TÜM/TEMETTÜ'nün hepsinde |
+> | AAGYO, BETAE, GENKM, GOLDA, LXGYO, MCARD, SOHOE, SSAAT | `BEYAN_YOK` | 8'inin de bildirim sorgusunda **0 KAFİF kaydı**; hepsi doldurması gereken kategoride |
+>
+> **İlk üç grup çözüldü:** katılım esaslı finans kuruluşları KAFİF doldurmuyor ama endekste. Muafiyet, uygunsuzluk değil kapsam dışılıktır ve endeks uygunluğunu **engellemez**. KTLEV bu gerekçeyle `MUAF` işaretlenir (`BEYAN_YOK` değil — o okuma üyelikle çelişiyor). Tasarruf finansman yukarıdaki listeye eklendi.
+>
+> **Son sekiz açık.** Üç okuma var ve üçü çok farklı sonuç doğurur:
+> - **(a) Keşif boşluğu:** verdiler, biz kaçırdık (pencere kimlikleri yakalamadan kaydı). KAFİF altı aylık olduğu için aktif bir endeks üyesinin son 1 yılda vermemiş olması beklenmez — bu okuma zayıf.
+> - **(b) Selef tüzel kişi:** yeniden yapılanma/unvan değişikliği sonrası beyan başka bir uuid altında. Unvanlar bunu düşündürüyor (MCARD → "Metropal Kurumsal Hizmetler", SOHOE → "Soho Giyim ve Enerji", BETAE → "Beta Enerji ve Teknoloji").
+> - **(c) Kural boşluğu:** vermediler, BIST yine de aldı → "beyan vermeyen ihtiyaten dışarıda" varsayımı yanlış.
+>
+> Faz 4.0 bu 11 ismi tek tek çözmeden mutabakat oranı hesaplamaz; aksi halde modelleme boşluğu, hipotez hatası gibi görünür.
 
 ---
 

@@ -11,7 +11,9 @@ Bu belge, her fazın Claude Code'a verilecek promptlarını içerir. Kaynaklar:
 **1.4a form arşivi ✔** (1.276/1.276 form) · **1.3 parser kapısı ✔**
 (ayrıştırma hatası 0, 22 sapmanın 22'si teşhisli) · **1.4b snapshot ✔**
 (1.280 panel satırı, H5 iki karar sütunuyla taşınıyor).
-118 test geçiyor. Sıradaki: **1.1b** (özet sayfaları, bütçe 800) → **4.0**.
+**1.1b özet sayfaları ✔** (746/746; endeks_uyeligi.csv 605 pay kodu,
+BIST KATILIM TÜM üyesi 243).
+138 test geçiyor. Sıradaki: **4.0** (ön mutabakat, ağ isteği yok).
 
 **1.1b ertelendi ve 1.3'ün kapısı yer değiştirdi (7 Ağu).** Şirket özet
 sayfaları kaymıyor, ne zaman çekilse aynı veriyi veriyor; KAFİF formları
@@ -253,7 +255,30 @@ muafiyet sınıflaması (banka=muaf, holding=muaf değil, belirsiz=None).
 
 ---
 
-## 1.1b — Şirket özet sayfaları · bütçe **800**
+## 1.1b — Şirket özet sayfaları ✔ **BİTTİ (8 Ağu 2026)**
+
+Çıktı: `OZET_RAPORU.md` · modül `katilim/ozet.py` ·
+`veri/evren/endeks_uyeligi.csv` (5.161 satır / 605 pay kodu).
+**746/746 sayfa çekildi.** Onaylı 800 bütçesi doldu, **400 ek bütçe
+onayla** alındı; toplam ~956 HTTP denemesi (746 çekim + ~210 deneme).
+
+| Bulgu | Etkisi |
+|---|---|
+| **BIST KATILIM TÜM: 243 pay kodu** | 4.0'ın referans tarafı hazır; panelle join tutuyor (232 ortak) |
+| Pazar sözlüğü §0.4'ün varsaydığından geniş (25 değer, çoklu) | XKTUM ön şartını sağlayan 605 pay kodu; §0.4 metni dar kalmış |
+| Belirsiz muafiyet **33 → 27** | 6 MKYO kapandı (§0.4'te yazılı, KAFİF'leri yok); kalan 26 sukuk SPV + KTLEV **MUAF İŞARETLENMEDİ** |
+| 1 sayfa okunamadı (YKR/YKYAT) | Aracı kurum, BIST'te işlem görmüyor; parser tahmin etmedi, hata fırlattı |
+| 162 `ALAN_EKSIK` | Hata değil: nitelikli yatırımcı pazarı vb. endekse girmiyor. Alan yoksa `None`, boş dize değil |
+
+**AÇIK KARAR — KTLEV:** sektörü `MALİ KURULUŞLAR / FİNANSMAN ŞİRKETLERİ`;
+§0.4'te tasarruf finansman yok ama KTLEV hiç KAFİF vermemiş. Ya §0.4'e
+madde eklenecek ya da mevcut `BEYAN_YOK` durumuna alınacak (önerim bu).
+Seçim yapılmadı.
+
+*1.1b promptu arşiv olarak duruyor.*
+
+<details>
+<summary>1.1b promptu (arşiv)</summary>
 
 > Pazar sondası beklenenden fazlasını buldu; ayrı adım oldu.
 
@@ -292,9 +317,12 @@ Test: pazar/sektör/endeks ayıklama, alanı olmayan sayfa (None kalmalı,
 boş dize değil), 33 belirsizin yeniden sınıflaması.
 ```
 
-**Çıkış kriteri:** 746 sayfa çekilmiş; `sirketler.csv`'de pazar ve sektör
-dolu; `endeks_uyeligi.csv` ölçüm tarihiyle yazılmış; belirsiz muafiyet
-sayısı düşmüş ve kalanlar gerekçeli.
+**Çıkış kriteri:** ✔ karşılandı — 746/746 sayfa çekildi; pazar 793/795,
+sektör 643/795 pay kodunda dolu (kalanların sayfasında o alan yok, `None`
+bırakıldı); `endeks_uyeligi.csv` her satırda `olcum_tarihi` ile yazıldı;
+belirsiz muafiyet 33 → 27 düştü ve kalan 27'nin **her biri gerekçeli**.
+
+</details>
 
 ---
 
@@ -985,8 +1013,37 @@ hatası ya H1-H4 revizyonu olarak açıklanmış.
 ```
 Görev: 1.4 biter bitmez kararlarımızı bugünkü XKTUM üyeliğiyle karşılaştır.
 
-Ön koşul: 1.1b (endeks üyeliği) + 1.4 (panel) tamam. Ağa çıkmaz, iki
+Ön koşul: 1.1b (endeks üyeliği) + 1.4b (panel) tamam. Ağa çıkmaz, iki
 yerel dosyayı karşılaştırır.
+
+ÖN ÖLÇÜM ZATEN YAPILDI (8 Ağu, sohbet içinde). Sayıları yeniden üretip
+doğrula, sonra ASIL İŞE geç:
+
+  biz UYGUN + XKTUM içinde : 230
+  biz UYGUN + XKTUM dışında:  21   ← 14'ü yakın izleme / piyasa öncesi
+                                     platformda, yani XKTUM ön şartını
+                                     (spec §0.4) zaten sağlamıyor.
+                                     Pazar filtresi uygulanınca ~7 kalır.
+  biz DEGIL + XKTUM içinde :   2   ← DOGUB, KCAER — ikisi de dönem
+                                     uyumsuzluğu, aşağıya bak
+  biz DEGIL + XKTUM dışında: 286
+
+ASIL İŞ — XKTUM üyesi olup panelde HİÇ OLMAYAN 11 isim. Bunlar
+karışıklık matrisine hiç girmiyor ve çözülmeden mutabakat oranı
+anlamsız. Spec §0.4'teki "MUAF ≠ ELENMİŞ" kutusunu oku.
+
+  ALBRK, ALK, KTLEV -> çözüldü: muaf ama endekste (katılım esaslı
+    finans kuruluşları). KAPSAM_DISI/AYIRT_EDILEMEDI'yi "elenmiş" gibi
+    işleyen her yeri düzelt.
+  AAGYO, BETAE, GENKM, GOLDA, LXGYO, MCARD, SOHOE, SSAAT -> AÇIK.
+    Sekizinin de bildirim sorgusunda 0 KAFİF kaydı var. Üç okumayı
+    (keşif boşluğu / selef tüzel kişi / kural boşluğu) ayırt et.
+    En ucuz sınama: bu 8 için /tr/kfif/{id}-{slug} sayfasına bak —
+    "Bilgi Mevcut Değil" mi dönüyor yoksa dolu bir form mu? Dolu form
+    dönüyorsa keşif boşluğu kanıtlanır ve 1.2'nin kapsamı yeniden
+    değerlendirilir. 8 istek; bunun için bütçe iste.
+    (Not: kfif rotası VERİ KAYNAĞI olarak hâlâ yasak — burada yalnız
+    "beyan var mı yok mu" ikili sorusuna bakılıyor.)
 
 Neden şimdi: H1-H4 doğrulanmadan üretilen panel araştırma çıktısıdır.
 Tarihsel PDF'leri (4.1) beklemeden sınayabildiğimiz kadarını sınamak,
@@ -1147,6 +1204,18 @@ katilim/olay.py
 - Olay tipleri: UYGUNLUK_KAYBI, UYGUNLUK_KAZANIMI, TOLERANSA_DUSUS,
   TOLERANSTAN_CIKIS, KILPAYI_UYARI (limite 0,5 puandan yakın — THY'nin
   %4,92'si bu kategorinin gerekçesi)
+
+DÜZELTME RİSKİ — olay hemen ateşlenmemeli. 1.1b'de canlı bir örnek
+bulundu: DOGUB 2025/6 Aylık'ı gelir %8,09 ile verdi (aşım), beş hafta
+sonra düzeltip %0,92 yaptı (temiz). Yani "KAFİF aşım gösterdi" tek
+başına işlem edilebilir bir sinyal değil.
+- Olaya bir `kesinlik` alanı ekle: düzeltme penceresi (gözlenen en uzun
+  düzeltme gecikmesi, 2.3'ten) geçmeden ATEŞLENMİŞ ama DOĞRULANMAMIŞ.
+- Aynı (ticker, dönem) için sonradan düzeltme gelirse olayı iptal etme,
+  KARŞI OLAY üret — iptal look-ahead'a davetiye, karşı olay değil.
+- 5.2 bu ayrımı ölçsün: düzeltilmeyen aşımların getiri etkisi ile
+  düzeltilenlerinki aynı mı? Farklıysa sinyal düzeltme penceresinden
+  sonra kullanılmalı.
 - Her olayın zamanı = KAFİF gonderim_ts (spec §5.1). Bilanço dönemi DEĞİL,
   endeks yürürlük tarihi DEĞİL.
 - Ayrıca ikinci bir zaman sütunu: endeks_yurutluk_tarihi (1 May / 1 Eki).
