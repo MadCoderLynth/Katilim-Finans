@@ -544,6 +544,46 @@ def cmd_ozet(args) -> int:
     return 1 if (kotu or kesildi) else 0
 
 
+def cmd_mutabakat(args) -> int:
+    """Faz 4.0 — kararlarımız vs. bugünkü XKTUM üyeliği. Ağa çıkmaz."""
+    from . import mutabakat
+
+    sirketler = evren.oku(args.evren_csv)
+    if not sirketler:
+        print(f"{args.evren_csv} yok.", file=sys.stderr)
+        return 2
+    try:
+        m = mutabakat.karsilastir(
+            sirketler, panel_csv=args.panel_csv, endeks_csv=args.endeks_csv,
+            beyan_csv=args.beyan_csv,
+        )
+        oran_iliski = mutabakat.oran_ayrismasi_duzeltme_iliskisi(args.panel_csv)
+    except mutabakat.MutabakatGirdisiYok as e:
+        print(f"GİRDİ YOK: {e}", file=sys.stderr)
+        return 2
+
+    oran, gercek, n = m.uyusmazlik_orani()
+    print(f"ÖN MUTABAKAT (son endeks revizyonu: {m.revizyon:%d.%m.%Y})")
+    print(f"  sınıf dağılımı    : {m.sinif_dagilimi()}")
+    print(f"  GERÇEK uyuşmazlık : {gercek} / karşılaştırılabilir {n} = %{oran*100:.2f}")
+    print(f"  yanlış pozitif    : {sum(1 for s in m.satirlar if s.yanlis_pozitif)}"
+          "  (biz UYGUN, BIST dışarıda — pahalı olan hata)")
+    print(f"\n  PANELDE YOK ({len(m.panelde_yok)}) — XKTUM üyesi, kaydımız yok:")
+    for s in sorted(m.panelde_yok, key=lambda z: z.ticker):
+        print(f"    {s.ticker:7s} {s.bizim_karar:16s} {s.unvan[:44]}")
+    print(f"\n  GERÇEK UYUŞMAZLIKLAR ({len(m.gercek_uyusmazliklar)}):")
+    for s in sorted(m.gercek_uyusmazliklar, key=lambda z: z.ticker):
+        print(f"    {s.ticker:7s} karar={s.bizim_karar:12s} "
+              f"kod={s.red_kodlari or '-':28s} XKTUM="
+              f"{'içinde' if s.xktum_uyesi else 'dışında'}")
+    print("\n  oran ayrışması ↔ düzeltme:")
+    print(f"    ayrışan {oran_iliski['oran_ayrisiyor']}, bunların "
+          f"{oran_iliski['bunlardan_duzeltme']}'i düzeltme "
+          f"(%{oran_iliski['ayrisan_duzeltme_orani']*100:.1f}) · "
+          f"panel geneli %{oran_iliski['genel_duzeltme_orani']*100:.1f}")
+    return 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="katilim", description=__doc__)
     alt = p.add_subparsers(dest="komut", required=True)
@@ -614,6 +654,13 @@ def main(argv=None) -> int:
                     help="istekler arası asgari saniye (düşürmeyin)")
     sp.add_argument("--her", type=int, default=50, help="kaç şirkette bir ilerleme bas")
     sp.set_defaults(fn=cmd_ozet)
+
+    sp = alt.add_parser("mutabakat")
+    sp.add_argument("--panel-csv", default="veri/panel/snapshot_20260808.csv")
+    sp.add_argument("--endeks-csv", default="veri/evren/endeks_uyeligi.csv")
+    sp.add_argument("--beyan-csv", default="veri/evren/beyan_durumu.csv")
+    sp.add_argument("--evren-csv", default=str(evren.EVREN_CSV))
+    sp.set_defaults(fn=cmd_mutabakat)
 
     args = p.parse_args(argv)
     return args.fn(args)

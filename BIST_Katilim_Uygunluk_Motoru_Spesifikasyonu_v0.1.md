@@ -68,12 +68,22 @@ Rehber madde 3.1'in başlığı zaten *"Şirketi Doğrudan Katılım Finansı İ
 >
 > **İlk üç grup çözüldü:** katılım esaslı finans kuruluşları KAFİF doldurmuyor ama endekste. Muafiyet, uygunsuzluk değil kapsam dışılıktır ve endeks uygunluğunu **engellemez**. KTLEV bu gerekçeyle `MUAF` işaretlenir (`BEYAN_YOK` değil — o okuma üyelikle çelişiyor). Tasarruf finansman yukarıdaki listeye eklendi.
 >
-> **Son sekiz açık.** Üç okuma var ve üçü çok farklı sonuç doğurur:
-> - **(a) Keşif boşluğu:** verdiler, biz kaçırdık (pencere kimlikleri yakalamadan kaydı). KAFİF altı aylık olduğu için aktif bir endeks üyesinin son 1 yılda vermemiş olması beklenmez — bu okuma zayıf.
-> - **(b) Selef tüzel kişi:** yeniden yapılanma/unvan değişikliği sonrası beyan başka bir uuid altında. Unvanlar bunu düşündürüyor (MCARD → "Metropal Kurumsal Hizmetler", SOHOE → "Soho Giyim ve Enerji", BETAE → "Beta Enerji ve Teknoloji").
-> - **(c) Kural boşluğu:** vermediler, BIST yine de aldı → "beyan vermeyen ihtiyaten dışarıda" varsayımı yanlış.
+> **Son sekiz ÇÖZÜLDÜ (4.0 ölçümü, 10 Ağu 2026) — ve üç okumanın hiçbiri değil.**
 >
-> Faz 4.0 bu 11 ismi tek tek çözmeden mutabakat oranı hesaplamaz; aksi halde modelleme boşluğu, hipotez hatası gibi görünür.
+> `/tr/kfif/{id}-{slug}` ikili sondası (8 istek): **8/8 DOLU FORM.** Yani (c) "kural boşluğu" yanlışlandı — bu şirketlerin KAFİF'i var. Ardından üçünde FİLTRESİZ bildirim sorgusu (3 istek): **0 KAFİF.** Bu da (a)'nın iki alt okumasını eledi: DG filtresi suçlu değil, bayatlık da değil.
+>
+> Geriye **dördüncü bir mekanizma** kalıyor: **KAFİF formu var ama ona karşılık gelen BİLDİRİM yok.** Form yalnız şirketin kfif sayfasında yayımlanmış, bildirim akışına hiç düşmemiş. Destekleyen kanıt: sekizinin de bildirim geçmişi tamamen halka arz evrakı (İzahname, Fiyat Tespit Raporu, Tasarruf Sahiplerine Satış Duyurusu) ve 5'inin slug kimliği evrenin %98–99 diliminde — hepsi **yeni halka açılmış** şirketler.
+>
+> **Bu bir KAPSAM SINIRIDIR, hipotez hatası değil.** Bildirim tabanlı toplama (1.2 → 1.4a) bu şirketleri yapısal olarak göremiyor; tek alternatif rota (`/tr/kfif/`) zaman damgası vermediği ve 3 beyanı render etmediği için tarihsel panele giremez.
+>
+> **KARAR (10 Ağu 2026): kapsam sınırı kabul edildi — §3.4 seçenek (a).** Üç kademeli gerekçe:
+> 1. **Tarihsel panel için kayıp yok.** Yeni halka açılan şirketin geçmişi yoktur; backtest'e katkısı zaten olamazdı.
+> 2. **Boşluk geçici ve kendi kendine kapanıyor.** İlk dönemsel KAFİF bildirim akışına düştüğünde 1.2 onları kendiliğinden toplar (~6 ay).
+> 3. **Güncel üyelik sorusu panelin işi değil.** "Bugün XKTUM'da kim var" `veri/evren/endeks_uyeligi.csv`'den, KAP'ın kendi ağzından cevaplanıyor. Panelin kattığı değer tarihsel etiket ve değişim tespitidir.
+>
+> Seçenek (b) reddedildi: kfif rotasından üretilecek kayıtta 3 beyan `None` kalıp karar `BELIRSIZ` çıkacaktı — olmayan bilgiyi olan bilgi gibi göstermek, kural 2'nin ihlali.
+>
+> **Durum kodu düzeltilir.** Bu 8 için `BEYAN_YOK` olgusal olarak YANLIŞTIR: beyan var, bildirim yok. Ayrı kod alırlar (`FORM_VAR_BILDIRIM_YOK`) ki (i) "vermesi gerekirdi, vermedi" diye okunmasınlar, (ii) dönemsel beyanları geldiğinde panele geçişleri izlenebilsin. Bu bir izleme listesidir, kalıcı bir sınıf değil.
 
 ---
 
@@ -193,7 +203,8 @@ Aşağıdakiler kural olarak kodlanacak ama **doğrulanmamış** kabul edilecek,
 - **H1:** 4A'daki herhangi bir EVET kesin elemedir (THY vakası destekliyor, n=1).
 - **H2:** Kâr payı imtiyazı, tasfiye payı imtiyazı ile aynı ağırlıkta eleme sebebidir.
 - **H3:** BIST payda olarak gerçekten max(PD, TV) kullanıyor.
-- **H4:** Tolerans durumu şirket bazında, kriter bazında değil.
+- **H4:** Tolerans durumu şirket bazında, kriter bazında değil. → **4.0 ölçtü, onaylanmadı:** tolerans zinciri uygulansa KLMSN'in uyuşmazlığı kapanıyor ama DCTTR'de yenisi açılıyor. Bu veriyle ayırt edilemiyor (n=2).
+- **H6 (aday, KODLANMADI):** Endeksten çıkan şirketin geri girişi gecikmeli — bir dönem temiz olmak yetmiyor. → PEKGY: 6 aylık formda borç %36,73 (bant üstü), yıllıkta %20,88 (temiz), ama 01.05.2026 revizyonunda geri girmemiş. Alternatif açıklama H3 (payda). Standart md. 3.5 tolerans için asimetrik bir bekleme tanımlıyor; girişte de simetrik bir hüküm olup olmadığı **TKBB metninden doğrulanmalı** — kodlamadan önce kaynağa bakılacak.
 - **H5:** BIST, formun **özet alanındaki** oranı kullanıyor; alt kalemlerden yeniden hesaplanan oranı değil. (Faz 1.3 ölçümü: 1.276 formun 19'unda formun kendi 4E TOPLAM satırı kendi kalemleriyle tutmuyor, ikisi farklı oran üretiyor. Standart beyan esaslı işlediği için BIST'in beyan edilen özeti kullanması muhtemel — ama doğrulanmadı.)
 
 **H5 şu anki veriyle SINANAMIYOR (1.4b ölçümü, 8 Ağu 2026).** Sıkılaşan üç kademe:

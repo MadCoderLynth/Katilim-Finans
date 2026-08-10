@@ -195,7 +195,18 @@ def test_muafiyet_belirsiz_none_kalir():
     bakılacak listeyi uzatır. Şüphe None'a gider.
     """
     assert _bul("ISYAT").mali_sektor_muaf is None
-    assert mali_sektor_muaf_mi("KATILIMEVİM TASARRUF FİNANSMAN A.Ş.") is None
+    # Sukuk ihraç aracı: §0.4'ün "varlık yönetim"i bundan farklı bir şey.
+    assert mali_sektor_muaf_mi("ATA VARLIK KİRALAMA A.Ş.") is None
+
+
+def test_tasarruf_finansman_muaf():
+    """Spec §0.4'e 8 Ağu 2026'da eklendi; kod aynı commit'te takip etti.
+
+    Gerekçe 4.0'ın bulgusu: KTLEV KAFİF vermiyor ama BIST KATILIM
+    30/50/100/TÜM'ün hepsinde. Muafiyet uygunsuzluk değil KAPSAM
+    DIŞILIKTIR ve endeks üyeliğini engellemez — "MUAF ≠ ELENMİŞ".
+    """
+    assert mali_sektor_muaf_mi("KATILIMEVİM TASARRUF FİNANSMAN A.Ş.") is True
 
 
 def test_muafiyet_sanayi_sirketi():

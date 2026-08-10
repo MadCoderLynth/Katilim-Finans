@@ -11,9 +11,9 @@ Bu belge, her fazın Claude Code'a verilecek promptlarını içerir. Kaynaklar:
 **1.4a form arşivi ✔** (1.276/1.276 form) · **1.3 parser kapısı ✔**
 (ayrıştırma hatası 0, 22 sapmanın 22'si teşhisli) · **1.4b snapshot ✔**
 (1.280 panel satırı, H5 iki karar sütunuyla taşınıyor).
-**1.1b özet sayfaları ✔** (746/746; endeks_uyeligi.csv 605 pay kodu,
-BIST KATILIM TÜM üyesi 243).
-138 test geçiyor. Sıradaki: **4.0** (ön mutabakat, ağ isteği yok).
+**1.1b özet sayfaları ✔** (746/746) · **4.0 ön mutabakat ✔**
+(gerçek uyuşmazlık 2/518 = %0,39; 11 açık ismin 11'i çözüldü).
+151 test geçiyor. Sıradaki: **2.0b** veya **2.2** — ikisi de aciliyetsiz.
 
 **1.1b ertelendi ve 1.3'ün kapısı yer değiştirdi (7 Ağu).** Şirket özet
 sayfaları kaymıyor, ne zaman çekilse aynı veriyi veriyor; KAFİF formları
@@ -1005,7 +1005,30 @@ reddediliyor.
 **Spec çıkış kriteri:** Uyuşmazlık oranı <%5; her uyuşmazlık ya parser
 hatası ya H1-H4 revizyonu olarak açıklanmış.
 
-## 4.0 — Nokta-zaman ön mutabakat · ağ isteği **yok**
+## 4.0 — Nokta-zaman ön mutabakat ✔ **BİTTİ (10 Ağu 2026)**
+
+Çıktı: `ON_MUTABAKAT_20260810.md` · modül `katilim/mutabakat.py` ·
+11 istek (8 kfif sondası + 3 filtresiz sorgu, ikisi de onaylandı).
+
+```
+UYUMLU 516 · KAPSAM 259 · PANELDE_YOK 11 · DÖNEM 7 · GERÇEK 2
+GERÇEK uyuşmazlık 2 / karşılaştırılabilir 518 = %0,39   (eşik <%5)
+```
+
+| Bulgu | Etkisi |
+|---|---|
+| 8 açık isim: **form var, bildirim yok** | Kapsam sınırı; bildirim tabanlı toplama onları göremiyor. **Karar noktası açık** |
+| KLMSN | Tolerans zinciri (3.1) uygulansa çözülür |
+| PEKGY | H3 adayı veya modellenmemiş yeniden giriş kuralı |
+| Zincir ölçümü | 5 kayıt çevrilir; KLMSN düzelir ama DCTTR bozulur → H4 onaylanmadı |
+| KAPSAM denetimi sırası | Uyumdan önce gelmeli; yoksa oran sahte iyileşiyor (761 → 516) |
+
+*4.0 promptu arşiv olarak duruyor.*
+
+<details>
+<summary>4.0 promptu (arşiv)</summary>
+
+### (özgün başlık) Nokta-zaman ön mutabakat · ağ isteği **yok**
 
 > 1.1b'nin `endeks_uyeligi.csv`'si sayesinde mümkün oldu. Tarihsel
 > mutabakatın yerini TUTMAZ; onu erkene çeker.
@@ -1088,8 +1111,11 @@ Bu adım hipotez REVİZE ETMEZ, yalnız aday listesi çıkarır. Revizyon 4.3'te
 tarihsel veriyle birlikte yapılır.
 ```
 
-**Çıkış kriteri:** Dört sınıf ayrılmış; gerçek uyuşmazlık oranı ölçülmüş;
-şüpheli hipotezler adaylandırılmış.
+**Çıkış kriteri:** ✔ karşılandı — dört sınıf ayrıldı, gerçek uyuşmazlık
+oranı %0,39 ölçüldü, 11 açık ismin 11'i çözüldü, H3/H4 adaylandırıldı
+(revizyon yapılmadı; o 4.3'ün işi).
+
+</details>
 
 ---
 

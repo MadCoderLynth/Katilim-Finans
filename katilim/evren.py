@@ -85,6 +85,11 @@ _MUAF = (
     "menkul degerler",    # aracı kurum
     "menkul kiymetler",
     "araci kurum",
+    # Spec §0.4'e 8 Ağu 2026'da eklendi. Gerekçe 4.0'ın bulgusu: KTLEV
+    # (Katılımevim) KAFİF vermiyor AMA BIST KATILIM 30/50/100/TÜM'ün
+    # hepsinde. Yani muafiyet uygunsuzluk değil KAPSAM DIŞILIKTIR ve
+    # endeks üyeliğini engellemez — "MUAF ≠ ELENMİŞ".
+    "tasarruf finansman",
 )
 
 # Muaf olabilir ama spec §0.4 listesinde birebir yok. El ile bakılacak.
@@ -94,7 +99,6 @@ _BELIRSIZ = (
     "yatirim ortakligi",   # sade 'Yatırım Ortaklığı' — MKYO mu, başka mı?
     "varlik kiralama",     # sukuk SPV'si; unvanında banka adı geçebiliyor
     "reasurans",           # sigorta mevzuatına tabi ama listede adı geçmiyor
-    "tasarruf finansman",  # KTLEV KAFİF doldurmuyor (Spec §0.4) ama listede yok
     "portfoy yonetim",
 )
 

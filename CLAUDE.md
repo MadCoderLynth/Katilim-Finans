@@ -18,6 +18,7 @@ python3 -m katilim.cli bildirimler --butce 800            # KAFİF kimlikleri (F
 python3 -m katilim.cli indir --butce 2600                 # formları arşivle (Faz 1.4a)
 python3 -m katilim.cli panel                              # snapshot paneli (Faz 1.4b)
 python3 -m katilim.cli ozet --butce 800                   # pazar/sektör/endeks (Faz 1.1b)
+python3 -m katilim.cli mutabakat                          # ön mutabakat (Faz 4.0)
 python3 -m katilim.cli dogrula veri/ham/DOSYA.html        # ayrıştır + self-check + karar
 python3 -m katilim.cli dok veri/ham/DOSYA.html            # tanı: tabloları imzalarıyla dök
 python3 -m katilim.cli toplu veri/ham --csv veri/panel/panel.csv
@@ -118,12 +119,41 @@ onunla çelişirse plan değil bu dosya esastır.
 
 Biten: **Faz 0** · **1.0** rota keşfi · **1.1** evren · **2.0** derinlik
 keşfi · **1.2** bildirim sorguları · **1.4a** form arşivi · **1.3** parser
-kapısı · **1.4b** snapshot paneli · **1.1b** özet sayfaları.
-Testler: 138 geçiyor (22 motor + 9 çekici + 23 evren + 8 derinlik +
-15 bildirim + 7 rsc + 13 toplayıcı + 9 pilot + 12 panel + 20 özet).
+kapısı · **1.4b** snapshot paneli · **1.1b** özet sayfaları · **4.0** ön mutabakat.
+Testler: 151 geçiyor (22 motor + 9 çekici + 24 evren + 8 derinlik +
+15 bildirim + 7 rsc + 13 toplayıcı + 9 pilot + 12 panel + 20 özet +
+12 mutabakat).
 
-Sıradaki: **4.0** (nokta-zaman ön mutabakat, ağ isteği yok). Girdileri
-hazır: `veri/panel/snapshot_20260808.csv` + `veri/evren/endeks_uyeligi.csv`.
+Sıradaki: **2.0b** (arka uç servisi sondası, bütçe 10) veya **2.2**
+(şablon versiyonlama, ağ isteği yok) — ikisi de aciliyetsiz.
+
+**Faz 4.0 bitti — ön mutabakat koştu.** Ayrıntı: @ON_MUTABAKAT_20260810.md
+(`katilim/mutabakat.py`, `python3 -m katilim.cli mutabakat`, 11 istek).
+
+- **Gerçek uyuşmazlık 2/518 = %0,39** (spec §4 eşiği <%5). Sınıf dağılımı:
+  516 UYUMLU · 259 KAPSAM · 11 PANELDE_YOK · 7 DÖNEM · **2 GERÇEK**.
+  Bu bir NOKTA-ZAMAN ölçümdür; H1–H4'ü sınamaz, panel hâlâ araştırma çıktısı.
+- **KAPSAM denetimi uyum denetiminden ÖNCE gelmeli.** İlk yazımda
+  `BEYAN_YOK` bir şirketin XKTUM dışında olması "kararımız tuttu" sayılıp
+  UYUMLU'ya yazılıyordu; bu oranı sahte iyileştiriyordu. Düzeltmeden sonra
+  UYUMLU 761 → 516. Görüşümüz olmayan kayıt ne uyumlu ne uyumsuzdur.
+- **8 açık isim ÇÖZÜLDÜ ve üç okumanın hiçbiri değil.** kfif ikili sondası
+  8/8 **dolu form**; filtresiz bildirim sorgusu (3 örnek) 0 KAFİF. Yani
+  **form var, bildirim yok** — hepsi yeni halka açılmış şirketler.
+  **Bu bir KAPSAM SINIRI**: bildirim tabanlı toplama onları yapısal olarak
+  göremiyor. Karar noktası açık (@ON_MUTABAKAT_20260810.md §3.4).
+- **İki gerçek uyuşmazlık, ikisi de yanlış pozitif:** KLMSN (tolerans
+  zinciri uygulansa çözülür) ve PEKGY (H3 adayı veya modellenmemiş
+  yeniden giriş kuralı).
+- **Tolerans zinciri ölçüldü:** uygulansa 5 kayıt çevrilir, 2'si en güncel
+  kayıt — KLMSN'i düzeltir ama **DCTTR'de yeni uyuşmazlık açar**. H4 bu
+  veriyle onaylanmış sayılmaz.
+- **`tasarruf finansman` muafiyete taşındı** (spec §0.4 + `evren.py` +
+  test, aynı commit). KTLEV `AYIRT_EDILEMEDI` → `KAPSAM_DISI`;
+  belirsiz muafiyet 27 → 26.
+- **H5 sınanmadı ve sınanamaz** (ayırt edici örneklem n=0). Onun yerine
+  ölçüldü: ayrışan 22 kaydın 5'i düzeltme (%22,7 ↔ panel geneli %14,8) —
+  **zayıf sinyal, n=22 ile kanıt değil.**
 
 **Faz 1.1b bitti — pazar, sektör, endeks üyeliği evrende.** Ayrıntı:
 @OZET_RAPORU.md (`katilim/ozet.py`, `python3 -m katilim.cli ozet`).
@@ -236,7 +266,7 @@ hata yok. 239 MB, `veri/ham/{TICKER}_{YIL}_{PERIYOT}_{bildirim_id}.html`.
    kaçırılan bildirim düzelmez.
 
 Zaman duyarlı olmayan her şey arşivin arkasına alındı:
-**1.2 ✔ → 1.4a ✔ → 1.3 ✔ → 1.4b ✔ → 1.1b ✔ → 2.0b → 4.0.**
+**1.2 ✔ → 1.4a ✔ → 1.3 ✔ → 1.4b ✔ → 1.1b ✔ → 4.0 ✔ → 2.0b → 2.2.**
 
 **Faz 1.2 bitti — ve zaman duyarlılığının yerini değiştirdi.**
 @BILDIRIM_GECMISI_RAPORU.md (651 istek / onaylı 800).
