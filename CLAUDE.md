@@ -122,13 +122,38 @@ onunla çelişirse plan değil bu dosya esastır.
 Biten: **Faz 0** · **1.0** rota keşfi · **1.1** evren · **2.0** derinlik
 keşfi · **1.2** bildirim sorguları · **1.4a** form arşivi · **1.3** parser
 kapısı · **1.4b** snapshot paneli · **1.1b** özet sayfaları · **4.0** ön
-mutabakat · **3.1** tolerans zinciri.
-Testler: 162 geçiyor (24 motor + 9 çekici + 24 evren + 8 derinlik +
-15 bildirim + 7 rsc + 13 toplayıcı + 9 pilot + 21 panel + 20 özet +
+mutabakat · **2.3** düzeltme çözümü · **3.1** tolerans zinciri.
+Testler: 168 geçiyor (24 motor + 9 çekici + 24 evren + 8 derinlik +
+16 bildirim + 7 rsc + 13 toplayıcı + 9 pilot + 28 panel + 20 özet +
 12 mutabakat).
 
 Sıradaki: **3.2** (belirsiz bant / PD paydası — PD kaynağı sorusu açık),
 **2.2** (şablon versiyonlama) veya **2.0b**. Hiçbiri aciliyetli değil.
+
+**Faz 2.3 bitti — düzeltme çözüldü, zincir dönem bazına alındı.** Ayrıntı:
+@DUZELTME_RAPORU.md (`duzeltmeleri_coz`, `panel_uret` yeniden yazıldı).
+
+- **3.1'in çevirdiği 5 satırın 4'ü ARTEFAKTMIŞ.** Zincir bildirim bazında
+  yürüyordu ve aynı dönemin düzeltmesini "önceki dönem" sanıyordu. Dönem
+  bazına alınınca yalnız KLMSN kaldı ve o da bir uyuşmazlığı KAPATIYOR.
+- **4.0 yeniden koştu: gerçek uyuşmazlık 2 → 1 (%0,39 → %0,19).** Geriye
+  yalnız PEKGY kaldı. 4.0'ın "zincir DCTTR'yi bozuyor, H4 desteklenmiyor"
+  bulgusu **geçersiz** — DCTTR artefaktmış. H4 revize EDİLMEDİ ama karşı
+  kanıtı kalmadı.
+- **`is_duzeltme` metin araması SİLİNDİ.** Kaynak yapılandırılmış:
+  RSC `isChanged` → `bildirim_gecmisi.csv` → `arsiv_indeksi.csv` → panel.
+  164 DUZENLENEN · 138 DUZELTILEN. **İkisi ayrı taşınıyor**, fark
+  belgelenmemiş. Testle donduruldu (metin araması geri gelemez).
+- **181 düzeltme olayı** (163 dönem, 135 pay kodu — 1.2'nin ölçümüyle
+  birebir). 160'ında oran değişmiş, **14'ünde bir beyan HAYIR↔EVET
+  dönmüş** — bunlar kararı doğrudan çeviriyor (G1–G4) ve Faz 5'in olay
+  akışı için de aday.
+- **Panelde `gecerli_kayit` sütunu:** dönemin en geç bildirimi (spec §3.2).
+  1.099/1.280 satır geçerli; eskiler **silinmiyor**, kendi zaman
+  damgalarıyla duruyor.
+- **BELİRSİZ dönem durumu DEVRALIR.** Dönem bazlı zincirde durumu "yok"
+  bırakmak sonraki dönem için sessizce `False` üretiyordu, yani veri
+  eksikliği toleransı sıfırlıyordu (kural 2 ihlali). Düzeltildi.
 
 **Faz 3.1 bitti — tolerans zinciri panele bağlandı.** Ayrıntı:
 `katilim/panel.py::panel_uret`, çıktı `veri/panel/panel.csv` (1.280 satır).
@@ -173,9 +198,10 @@ Bu pencerede hiç tetiklenmiyor ama panel derinleştikçe tetiklenecek.
 - **İki gerçek uyuşmazlık, ikisi de yanlış pozitif:** KLMSN (tolerans
   zinciri uygulansa çözülür) ve PEKGY (H3 adayı veya modellenmemiş
   yeniden giriş kuralı).
-- **Tolerans zinciri ölçüldü:** uygulansa 5 kayıt çevrilir, 2'si en güncel
-  kayıt — KLMSN'i düzeltir ama **DCTTR'de yeni uyuşmazlık açar**. H4 bu
-  veriyle onaylanmış sayılmaz.
+- ~~**Tolerans zinciri ölçüldü:** … DCTTR'de yeni uyuşmazlık açar.~~
+  **GEÇERSİZ (2.3, 10 Ağu):** DCTTR'nin elenmesi zincirden değil,
+  düzeltmenin çözülmemiş olmasındandı. Dönem bazlı zincirde yalnız KLMSN
+  çevriliyor ve gerçek uyuşmazlık 2 → 1'e düşüyor.
 - **`tasarruf finansman` muafiyete taşındı** (spec §0.4 + `evren.py` +
   test, aynı commit). KTLEV `AYIRT_EDILEMEDI` → `KAPSAM_DISI`;
   belirsiz muafiyet 27 → 26.
@@ -294,7 +320,7 @@ hata yok. 239 MB, `veri/ham/{TICKER}_{YIL}_{PERIYOT}_{bildirim_id}.html`.
    kaçırılan bildirim düzelmez.
 
 Zaman duyarlı olmayan her şey arşivin arkasına alındı:
-**1.2 ✔ → 1.4a ✔ → 1.3 ✔ → 1.4b ✔ → 1.1b ✔ → 4.0 ✔ → 3.1 ✔ → 2.2 → 3.2.**
+**1.2 ✔ → 1.4a ✔ → 1.3 ✔ → 1.4b ✔ → 1.1b ✔ → 4.0 ✔ → 2.3 ✔ → 3.1 ✔ → 2.2 → 3.2.**
 
 **Faz 1.2 bitti — ve zaman duyarlılığının yerini değiştirdi.**
 @BILDIRIM_GECMISI_RAPORU.md (651 istek / onaylı 800).

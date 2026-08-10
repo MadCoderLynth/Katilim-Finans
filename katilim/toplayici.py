@@ -113,6 +113,7 @@ class ArsivKaydi:
     periyot: str | None
     gonderim_ts: datetime | None
     durum: str
+    duzeltme_izi: str = ""        # RSC isChanged: DUZENLENEN / DUZELTILEN
     dosya: str = ""
     bayt: int = 0
     sha256: str = ""
@@ -159,6 +160,7 @@ def satirlari_grupla(bildirim_gecmisi: list[dict]) -> list[dict]:
                 "periyot": s["periyot"],
                 "gonderim_ts": s["gonderim_ts"],
                 "konu": s["konu"],
+                "duzeltme_izi": s.get("duzeltme_izi") or "",
             },
         )
         if s["ticker"] not in g["tickerlar"]:
@@ -208,6 +210,7 @@ def formlari_indir(
             periyot=g["periyot"],
             gonderim_ts=g["gonderim_ts"],
             durum=DURUM_ZATEN_VARDI,
+            duzeltme_izi=g.get("duzeltme_izi") or "",
             # "Keşif penceresi dışında" = bu kimlik bugün sorgu sonucunda
             # görünmezdi. Hipotezin test kümesi tam olarak bunlar.
             pencere_disi=bool(g["gonderim_ts"] and g["gonderim_ts"] < pencere_basi),
@@ -306,7 +309,7 @@ def beyan_durumlari(sirketler, sorgu_durumlari: list[dict]) -> list[dict]:
 
 INDEKS_BASLIKLARI = [
     "bildirim_id", "ticker", "tum_tickerlar", "yil", "periyot", "gonderim_ts",
-    "durum", "dosya", "bayt", "sha256", "pencere_disi", "not",
+    "durum", "dosya", "bayt", "sha256", "pencere_disi", "duzeltme_izi", "not",
 ]
 BEYAN_BASLIKLARI = [
     "ticker", "unvan", "durum", "kafif_sayisi", "sorgu_durumu", "mali_sektor_muaf",
@@ -334,6 +337,7 @@ def indeksi_yaz(indirme: Indirme, yol: Path | str = INDEKS_CSV) -> Path:
                     "bayt": k.bayt,
                     "sha256": k.sha256,
                     "pencere_disi": "EVET" if k.pencere_disi else "HAYIR",
+                    "duzeltme_izi": k.duzeltme_izi,
                     "not": k.not_,
                 }
             )
@@ -379,3 +383,153 @@ def ozet(indirme: Indirme, beyan: list[dict]) -> dict:
         "bayt_min": boyutlar[0] if boyutlar else 0,
         "bayt_max": boyutlar[-1] if boyutlar else 0,
     }
+
+
+# --- Düzeltme çözümü (Faz 2.3) ---------------------------------------------
+#
+# Spec §3.2: aynı (ticker, yıl, periyot) için birden çok bildirim olabilir;
+# **en geç `gonderim_ts` kazanır ama eskisi SİLİNMEZ** — düzeltme olayının
+# kendisi bir sinyaldir.
+#
+# Düzeltme sinyali METİN ARAMASINDAN gelmiyor. Kaynak, bildirim sorgusunun
+# RSC yükündeki `isChanged` alanı: `DUZENLENEN` (düzelten) / `DUZELTILEN`
+# (düzeltilen). İkisi AYRI taşınıyor — aradaki fark KAP tarafından
+# belgelenmemiş, birleştirmek anlamı kaybetmek olur.
+
+BEYAN_ALAN_ADLARI = (
+    "b1_1", "b1_2", "b2_1", "b2_2", "b3_1", "b3_2",
+    "b4_1", "b4_2", "b4_3", "b4_4", "b4_5", "b4_6", "b4_7",
+)
+
+
+@dataclass
+class DuzeltmeOlayi:
+    ticker: str
+    yil: int | None
+    periyot: str | None
+    ilk_bildirim_id: int
+    ilk_gonderim_ts: datetime | None
+    duzeltme_bildirim_id: int
+    duzeltme_gonderim_ts: datetime | None
+    duzeltme_izi: str                      # DUZENLENEN | DUZELTILEN | ""
+    degisen_oranlar: dict                  # {'gelir': (eski, yeni), ...}
+    degisen_beyanlar: dict                 # {'b4_1': (False, True), ...}
+    karar_ceviren_beyan: bool = False      # HAYIR <-> EVET dönmüş mü
+    kayit_sayisi: int = 2
+
+    @property
+    def oran_degisti(self) -> bool:
+        return bool(self.degisen_oranlar)
+
+
+def _oran_ucusu(b) -> dict:
+    """Karara giren üç oran — ÖZET alanından (H5 varsayılanı)."""
+    return {
+        "gelir": b.ozet_gelir_orani,
+        "varlik": b.ozet_varlik_orani,
+        "borc": b.ozet_borc_orani,
+    }
+
+
+def duzeltmeleri_coz(kayitlar) -> tuple[list, list[DuzeltmeOlayi]]:
+    """(gecerli_kayitlar, duzeltme_olaylari).
+
+    `gecerli_kayitlar`: her (ticker, yıl, periyot) için EN GEÇ gönderilen
+    kayıt. Eskiler **silinmez** — panelde kendi zaman damgalarıyla durmaya
+    devam ederler (o kayıt kendi penceresinde canlı etiketti); yalnız
+    tolerans zincirini ilerletmezler.
+
+    `duzeltme_olaylari`: her ardışık (önceki, sonraki) çift için bir olay.
+    Üç bildirimli bir dönem iki olay üretir.
+
+    Look-ahead disiplini (spec §5.1): düzeltilmiş kaydın geçerlilik
+    başlangıcı DÜZELTMENİN `gonderim_ts`'idir, orijinalinki değil.
+    """
+    gruplar: dict[tuple, list] = {}
+    for k in kayitlar:
+        for t in (k.tickerlar or ["BILINMIYOR"]):
+            gruplar.setdefault((t, k.yil, k.periyot), []).append(k)
+
+    gecerli, olaylar = [], []
+    for (ticker, yil, periyot), grup in sorted(
+        gruplar.items(), key=lambda kv: (kv[0][0], str(kv[0][1]), str(kv[0][2]))
+    ):
+        sirali = sorted(
+            grup, key=lambda k: (k.gonderim_ts is None, k.gonderim_ts or datetime.min)
+        )
+        gecerli.append(sirali[-1])          # en geç kazanır (spec §3.2)
+
+        for onceki, sonraki in zip(sirali, sirali[1:]):
+            a, b = onceki.bildirim, sonraki.bildirim
+            oran_a, oran_b = _oran_ucusu(a), _oran_ucusu(b)
+            degisen_oran = {
+                ad: (oran_a[ad], oran_b[ad])
+                for ad in ("gelir", "varlik", "borc")
+                if oran_a[ad] != oran_b[ad]
+            }
+            degisen_beyan = {
+                ad: (a.beyanlar.get(ad), b.beyanlar.get(ad))
+                for ad in BEYAN_ALAN_ADLARI
+                if a.beyanlar.get(ad) != b.beyanlar.get(ad)
+            }
+            # HAYIR <-> EVET dönüşü kararı DOĞRUDAN çevirir (G1-G4 kesin
+            # kapılar). None <-> bool geçişi ayrı bir şey: veri eksikliği.
+            ceviren = any(
+                {eski, yeni} == {True, False} for eski, yeni in degisen_beyan.values()
+            )
+            olaylar.append(
+                DuzeltmeOlayi(
+                    ticker=ticker, yil=yil, periyot=periyot,
+                    ilk_bildirim_id=onceki.bildirim_id,
+                    ilk_gonderim_ts=onceki.gonderim_ts,
+                    duzeltme_bildirim_id=sonraki.bildirim_id,
+                    duzeltme_gonderim_ts=sonraki.gonderim_ts,
+                    duzeltme_izi=getattr(sonraki, "duzeltme_izi", "") or "",
+                    degisen_oranlar=degisen_oran,
+                    degisen_beyanlar=degisen_beyan,
+                    karar_ceviren_beyan=ceviren,
+                    kayit_sayisi=len(sirali),
+                )
+            )
+    return gecerli, olaylar
+
+
+DUZELTME_BASLIKLARI = [
+    "ticker", "yil", "periyot", "kayit_sayisi",
+    "ilk_bildirim_id", "ilk_gonderim_ts",
+    "duzeltme_bildirim_id", "duzeltme_gonderim_ts", "duzeltme_izi",
+    "degisen_oranlar", "degisen_beyanlar", "karar_ceviren_beyan",
+]
+
+
+def duzeltme_olaylarini_yaz(olaylar: list[DuzeltmeOlayi],
+                            yol: Path | str = Path("veri/panel/duzeltme_olaylari.csv")) -> Path:
+    yol = Path(yol)
+    yol.parent.mkdir(parents=True, exist_ok=True)
+
+    def _ts(d):
+        return d.strftime("%Y-%m-%d %H:%M:%S") if d else ""
+
+    with open(yol, "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.DictWriter(f, fieldnames=DUZELTME_BASLIKLARI)
+        w.writeheader()
+        for o in sorted(olaylar, key=lambda o: (o.ticker, _ts(o.duzeltme_gonderim_ts))):
+            w.writerow({
+                "ticker": o.ticker,
+                "yil": o.yil if o.yil is not None else "",
+                "periyot": o.periyot or "",
+                "kayit_sayisi": o.kayit_sayisi,
+                "ilk_bildirim_id": o.ilk_bildirim_id,
+                "ilk_gonderim_ts": _ts(o.ilk_gonderim_ts),
+                "duzeltme_bildirim_id": o.duzeltme_bildirim_id,
+                "duzeltme_gonderim_ts": _ts(o.duzeltme_gonderim_ts),
+                "duzeltme_izi": o.duzeltme_izi,
+                "degisen_oranlar": "; ".join(
+                    f"{ad}: {eski} -> {yeni}" for ad, (eski, yeni) in o.degisen_oranlar.items()
+                ),
+                "degisen_beyanlar": "; ".join(
+                    f"{ad}: {eski} -> {yeni}" for ad, (eski, yeni) in o.degisen_beyanlar.items()
+                ),
+                "karar_ceviren_beyan": "EVET" if o.karar_ceviren_beyan else "HAYIR",
+            })
+    return yol

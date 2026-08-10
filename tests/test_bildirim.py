@@ -228,7 +228,9 @@ def test_csv_gidis_donus():
     satirlar = [
         {"ticker": "THYAO", "bildirim_id": 1566002, "yil": 2025, "periyot": "Yıllık",
          "gonderim_ts": bildirim._ts("04.03.2026 18:57:54"),
-         "konu": "Katılım Finansı İlkeleri Bilgi Formu", "indirildi_mi": False},
+         "konu": "Katılım Finansı İlkeleri Bilgi Formu", "indirildi_mi": False,
+         # 2.3: yapılandırılmış düzeltme izi (RSC `isChanged`)
+         "duzeltme_izi": "DUZENLENEN"},
     ]
     with tempfile.TemporaryDirectory() as d:
         yol = pathlib.Path(d) / "g.csv"
@@ -237,12 +239,30 @@ def test_csv_gidis_donus():
     assert geri == satirlar
 
 
+def test_duzeltme_izi_csvde_tasiniyor():
+    """2.3: `isChanged` DUZENLENEN/DUZELTILEN ayrı taşınır, birleştirilmez."""
+    satirlar = [
+        {"ticker": "AHSGY", "bildirim_id": 1489614, "yil": 2025,
+         "periyot": "6 Aylık", "gonderim_ts": None, "konu": "K",
+         "indirildi_mi": False, "duzeltme_izi": "DUZENLENEN"},
+        {"ticker": "AHSGY", "bildirim_id": 1487384, "yil": 2025,
+         "periyot": "6 Aylık", "gonderim_ts": None, "konu": "K",
+         "indirildi_mi": False, "duzeltme_izi": "DUZELTILEN"},
+    ]
+    with tempfile.TemporaryDirectory() as d:
+        yol = pathlib.Path(d) / "g.csv"
+        bildirim.yaz(satirlar, yol)
+        geri = {r["bildirim_id"]: r["duzeltme_izi"] for r in bildirim.oku(yol)}
+    assert geri == {1489614: "DUZENLENEN", 1487384: "DUZELTILEN"}
+
+
 def test_indirilmis_isareti_korunuyor():
     """1.2 yeniden koşunca 1.4'ün indirdiği formlar 'indirilmedi' olmamalı."""
     with tempfile.TemporaryDirectory() as d:
         yol = pathlib.Path(d) / "g.csv"
         temel = {"ticker": "THYAO", "bildirim_id": 1, "yil": 2025, "periyot": "Yıllık",
-                 "gonderim_ts": None, "konu": "K", "indirildi_mi": True}
+                 "gonderim_ts": None, "konu": "K", "indirildi_mi": True,
+                 "duzeltme_izi": None}
         bildirim.yaz([temel], yol)
         yeni = [dict(temel, indirildi_mi=False)]
         bildirim.yaz(bildirim.indirilenleri_koru(yeni, yol), yol)

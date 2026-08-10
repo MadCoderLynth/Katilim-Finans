@@ -365,6 +365,7 @@ def gecmisi_topla(
                         "gonderim_ts": b.gonderim_ts,
                         "konu": b.konu,
                         "indirildi_mi": False,
+                        "duzeltme_izi": b.duzeltme_izi,
                     }
                 )
 
@@ -434,7 +435,8 @@ def dg_dogrula(sirketler, cekici, *, ornek: int = 10, tohum: int = 20260807) -> 
 # --- Kalıcılık -------------------------------------------------------------
 
 BASLIKLAR = [
-    "ticker", "bildirim_id", "yil", "periyot", "gonderim_ts", "konu", "indirildi_mi",
+    "ticker", "bildirim_id", "yil", "periyot", "gonderim_ts", "konu",
+    "indirildi_mi", "duzeltme_izi",
 ]
 DURUM_BASLIKLARI = [
     "ticker", "uuid", "unvan", "durum", "kafif_sayisi", "toplam_bildirim",
@@ -452,6 +454,10 @@ def _bicimle(satir: dict) -> dict:
         "gonderim_ts": ts.strftime("%Y-%m-%d %H:%M:%S") if ts else "",
         "konu": satir["konu"],
         "indirildi_mi": "EVET" if satir["indirildi_mi"] else "HAYIR",
+        # RSC'deki `isChanged`: DUZENLENEN (düzelten) / DUZELTILEN (düzeltilen).
+        # İkisi AYRI taşınıyor — aradaki fark KAP tarafından belgelenmemiş,
+        # birleştirmek anlamı kaybetmek olur (2.3).
+        "duzeltme_izi": satir.get("duzeltme_izi") or "",
     }
 
 
@@ -499,6 +505,7 @@ def oku(yol: Path | str = GECMIS_CSV) -> list[dict]:
                 ),
                 "konu": r["konu"],
                 "indirildi_mi": r["indirildi_mi"] == "EVET",
+                "duzeltme_izi": (r.get("duzeltme_izi") or "") or None,
             }
             for r in csv.DictReader(f)
         ]

@@ -1273,17 +1273,36 @@ katilim/olay.py
   TOLERANSTAN_CIKIS, KILPAYI_UYARI (limite 0,5 puandan yakın — THY'nin
   %4,92'si bu kategorinin gerekçesi)
 
-DÜZELTME RİSKİ — olay hemen ateşlenmemeli. 1.1b'de canlı bir örnek
-bulundu: DOGUB 2025/6 Aylık'ı gelir %8,09 ile verdi (aşım), beş hafta
-sonra düzeltip %0,92 yaptı (temiz). Yani "KAFİF aşım gösterdi" tek
-başına işlem edilebilir bir sinyal değil.
-- Olaya bir `kesinlik` alanı ekle: düzeltme penceresi (gözlenen en uzun
-  düzeltme gecikmesi, 2.3'ten) geçmeden ATEŞLENMİŞ ama DOĞRULANMAMIŞ.
-- Aynı (ticker, dönem) için sonradan düzeltme gelirse olayı iptal etme,
+DÜZELTME PENCERESİ — 2.3'te ÖLÇÜLDÜ, tasarıma girer.
+
+  düzeltme gecikmesi (n=181): medyan 21 gün · p90 35 · p95 38 · max 55
+  karar çeviren 14 düzeltmenin hepsi: <= 31 gün
+  düzeltme oranı: 163 dönem / ~1.100 geçerli dönem kaydı ≈ %15
+
+Bu, bilgi öncüllüğü penceresini büyük ölçüde TÜKETİYOR. DEVIR_NOTU
+§2.5 "4-8 hafta" diyordu; gerçek kullanılabilir pencere daha dar:
+  DOGUB 2026/6 Aylık 30.07.2026 -> revizyon 01.10 = 63 gün
+    p95 düzeltme penceresi 38 gün -> temiz sinyal ~25 gün
+  PNLSN 2025/Yıllık 25.02.2026 -> revizyon 01.05 = 65 gün -> ~27 gün
+Yani sinyal var ama 2-4 hafta. Max gecikmeyi (55 gün) beklerseniz
+pencere neredeyse kapanıyor. 5.2 bunu ölçmenin merkezine koysun.
+
+- Olaya `kesinlik` alanı: HAM (yeni yayım) / OLGUN (>38 gün, p95
+  geçildi) / KESIN (sonraki dönem yayımlandı). Eşikler 2.3'ün
+  ölçümünden, tahminden değil.
+- Aynı (ticker, dönem) için düzeltme gelirse olayı İPTAL ETME,
   KARŞI OLAY üret — iptal look-ahead'a davetiye, karşı olay değil.
-- 5.2 bu ayrımı ölçsün: düzeltilmeyen aşımların getiri etkisi ile
-  düzeltilenlerinki aynı mı? Farklıysa sinyal düzeltme penceresinden
-  sonra kullanılmalı.
+- 5.2 iki rejimi AYRI ölçsün: medyanda (21 gün) işlem eden ile p95'te
+  (38 gün) işlem eden. Aradaki fark, hız/kesinlik ödünleşmesinin
+  fiyatı — ve bu modülün sinyal mi risk filtresi mi olacağını
+  belirleyecek olan da o.
+
+G1 KAPISI EN GÜVENİLMEZ — 2.3 bulgusu. Karar çeviren 14 düzeltmenin
+9'u `b1_1`/`b1_2` (esas sözleşme beyanları) ve 7'si False->True. Esas
+sözleşme üç haftada değişmez; bunlar eksik beyanın düzeltilmesi. Yani
+ilk bildirimin "G1 temiz" demesi, düzeltilmiş bildirimin aynı şeyi
+demesinden zayıf kanıttır. `kesinlik` alanı bunu yansıtsın: G1'e
+dayanan UYGUN kararları HAM aşamasında ayrıca işaretle.
 - Her olayın zamanı = KAFİF gonderim_ts (spec §5.1). Bilanço dönemi DEĞİL,
   endeks yürürlük tarihi DEĞİL.
 - Ayrıca ikinci bir zaman sütunu: endeks_yurutluk_tarihi (1 May / 1 Eki).

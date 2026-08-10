@@ -436,6 +436,11 @@ def cmd_panel(args) -> int:
     karar_yolu = panel.panel_yaz(kararlar, args.karar_csv)
     ko = panel.panel_ozet(kararlar, snapshot=satirlar)
 
+    # Faz 2.3 — düzeltme çözümü. Eskiler SİLİNMEZ; olay ayrı tabloya.
+    from . import toplayici as _t
+    gecerli, olaylar = _t.duzeltmeleri_coz(kayitlar)
+    duz_yolu = _t.duzeltme_olaylarini_yaz(olaylar, args.duzeltme_csv)
+
     print(f"\nSNAPSHOT -> {yol}")
     print(f"  panel satırı      : {o['panel_satiri']} "
           f"({o['benzersiz_bildirim']} bildirim, {o['benzersiz_ticker']} pay kodu)")
@@ -460,6 +465,19 @@ def cmd_panel(args) -> int:
     print(f"  zincirin çevirdiği: {ko['zincirin_cevirdigi']} satır")
     for t, yil, per, eski, yeni in ko["cevrilen_liste"]:
         print(f"      * {t:7s} {yil}/{per:9s} {eski} -> {yeni}")
+
+    ceviren = [o for o in olaylar if o.karar_ceviren_beyan]
+    oranli = [o for o in olaylar if o.oran_degisti]
+    print(f"\nDÜZELTME OLAYLARI -> {duz_yolu}")
+    print(f"  olay              : {len(olaylar)} "
+          f"({len({(o.ticker, o.yil, o.periyot) for o in olaylar})} dönem, "
+          f"{len({o.ticker for o in olaylar})} pay kodu)")
+    print(f"  geçerli kayıt     : {len(gecerli)} (dönemin en geç bildirimi)")
+    print(f"  oranı değişen     : {len(oranli)}")
+    print(f"  BEYAN ÇEVİREN     : {len(ceviren)}  <- karar doğrudan değişir")
+    for o in ceviren[:10]:
+        print(f"      * {o.ticker:7s} {o.yil}/{o.periyot:9s} "
+              f"{ {k: f'{a} -> {b}' for k, (a, b) in o.degisen_beyanlar.items()} }")
 
     if rapor.hatali:
         print(f"\nAYRIŞTIRMA HATASI ({len(rapor.hatali)}):", file=sys.stderr)
@@ -595,6 +613,9 @@ def cmd_mutabakat(args) -> int:
         print(f"    {s.ticker:7s} karar={s.bizim_karar:12s} "
               f"kod={s.red_kodlari or '-':28s} XKTUM="
               f"{'içinde' if s.xktum_uyesi else 'dışında'}")
+    if oran_iliski.get("uygulanamaz"):
+        print(f"\n  oran ayrışması ↔ düzeltme: {oran_iliski['uygulanamaz']}")
+        return 0
     print("\n  oran ayrışması ↔ düzeltme:")
     print(f"    ayrışan {oran_iliski['oran_ayrisiyor']}, bunların "
           f"{oran_iliski['bunlardan_duzeltme']}'i düzeltme "
@@ -664,6 +685,7 @@ def main(argv=None) -> int:
     sp.add_argument("--karar-csv", default="veri/panel/panel.csv",
                     help="tolerans zincirli panel (Faz 3.1)")
     sp.add_argument("--beyan-csv", default="veri/evren/beyan_durumu.csv")
+    sp.add_argument("--duzeltme-csv", default="veri/panel/duzeltme_olaylari.csv")
     sp.set_defaults(fn=cmd_panel)
 
     sp = alt.add_parser("ozet")

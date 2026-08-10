@@ -123,11 +123,24 @@ def son_kararlar(panel_csv: Path | str) -> dict[str, dict]:
         raise MutabakatGirdisiYok(
             f"panel satırsız: {panel_csv} — karşılaştırılacak karar yok"
         )
+    # İki panel şeması destekleniyor: snapshot (`gonderim_ts`) ve tolerans
+    # zincirli panel (`gecerlilik_baslangic` + `gecerli_kayit`). İkincisinde
+    # yalnız dönemin GEÇERLİ kaydı dikkate alınır (spec §3.2): düzeltilmiş
+    # eski kayıtlar panelde durur ama "bugünkü karar" onlar değildir.
+    ts_alan = "gonderim_ts" if "gonderim_ts" in satirlar[0] else "gecerlilik_baslangic"
+    gecerli_alan = "gecerli_kayit" if "gecerli_kayit" in satirlar[0] else None
+
     son: dict[str, dict] = {}
     for r in satirlar:
+        if gecerli_alan and r.get(gecerli_alan) != "EVET":
+            continue
         t = r["ticker"]
-        if t not in son or (r["gonderim_ts"] or "") > (son[t]["gonderim_ts"] or ""):
+        if t not in son or (r[ts_alan] or "") > (son[t][ts_alan] or ""):
             son[t] = r
+    # Karşılaştırma kodu `gonderim_ts` bekliyor; şemayı normalize et.
+    if ts_alan != "gonderim_ts":
+        for r in son.values():
+            r["gonderim_ts"] = r[ts_alan]
     return son
 
 
@@ -299,6 +312,10 @@ def oran_ayrismasi_duzeltme_iliskisi(panel_csv: Path | str) -> dict:
     2.3'ü (düzeltme mantığı) ve ileride H5'i bağlar.
     """
     satirlar = _oku(Path(panel_csv), "panel")
+    if not satirlar or "oran_ayrisiyor" not in satirlar[0]:
+        # Tolerans zincirli panelde bu sütunlar yok; ölçüm snapshot'ta yapılır.
+        # Sessizce 0 dönmek "ayrışma yok" demek olurdu (kural 7).
+        return {"uygulanamaz": "panel şemasında oran sütunları yok"}
     ayrisan = [r for r in satirlar if r["oran_ayrisiyor"] == "EVET"]
     h5 = [r for r in ayrisan if r["h5_ayirt_edici"] == "EVET"]
     return {

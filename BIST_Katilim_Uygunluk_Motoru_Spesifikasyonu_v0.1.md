@@ -192,6 +192,16 @@ aşım var (herhangi bir miktarda),
 
 Bant sınırları: gelir %5 → **%5,5** | varlık ve borç %33 → **%36,3**
 
+**Zincir dönem bazında yürür, bildirim bazında değil.** Aynı dönemin düzeltilmiş bildirimi yeni bir değerleme dönemi değildir. Look-ahead korunarak: P(n) değerlendirilirken "önceki dönem durumu", P(n−1)'in **P(n)'in gönderim anında yayımlanmış en son** kaydından gelir.
+
+**KARAR — zincir boşluğunda durum TAŞINIR (10 Ağu 2026).** Şirketin kendi serisinde >280 gün (≈1,5 kadans; ölçülen ardışık aralık medyanı 185, en uzunu 259) sessizlik varsa tolerans durumu sıfırlanmaz, taşınır ve satır `ZINCIR_BOSLUGU` ile işaretlenir. Üç gerekçe:
+
+1. **Hata maliyeti asimetrisi.** Taşıyıp yanılmak gereksiz eleme (kaçırılan fırsat, ucuz); sıfırlayıp yanılmak aşımı olan şirketi temiz göstermek (yanlış pozitif, pahalı).
+2. **`BELIRSIZ` davranışıyla tutarlı.** Veri eksikliği toleransı zaten sıfırlamıyor.
+3. **Belirleyici olan:** boşluklarımız çoğu zaman şirketin sessizliği değil **bizim körlüğümüz** — kayan sorgu penceresi ve §0.4'teki "form var, bildirim yok" vakası. Sıfırlamak, bir toplama boşluğunun bir şirketin sicilini sessizce temizlemesine izin vermek olurdu; kural 2'nin ihlali.
+
+`ZINCIR_BOSLUGU` yalnız etiket değil **tetikleyicidir**: o şirketin bildirim geçmişi yeniden sorgulanır, kimlik bu arada görünür olmuş olabilir.
+
 > Kritik: ikinci dönemde tolerans sıfırlanıyor. Üç kriterden **herhangi birinde** aşım varsa yeterli — aynı kriter olmak zorunda değil. Bu yüzden durum makinesi kriter bazında değil, şirket bazında tutulur.
 
 ### 2.2 Belirsiz bant

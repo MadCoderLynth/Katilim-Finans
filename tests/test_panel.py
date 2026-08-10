@@ -240,11 +240,16 @@ def test_dort_donemlik_zincir_temiz_tolerans_temiz_tolerans():
     Kritik nokta üçüncü dönem: temize dönmek tolerans durumunu SIFIRLAR,
     yani dördüncü dönemdeki aşım yeniden TOLERANSTA olur, eleme olmaz.
     """
+    # DÖRT AYRI DÖNEM — aynı dönemin düzeltmesi zinciri ilerletmez (2.3).
     kayitlar = [
-        _zincir_kayit(1, gelir_ozet=Decimal("1.0"), ts=datetime(2025, 8, 13)),
-        _zincir_kayit(2, gelir_ozet=Decimal("5.2"), ts=datetime(2026, 3, 11)),
-        _zincir_kayit(3, gelir_ozet=Decimal("2.0"), ts=datetime(2026, 8, 5)),
-        _zincir_kayit(4, gelir_ozet=Decimal("5.3"), ts=datetime(2027, 3, 9)),
+        _zincir_kayit(1, gelir_ozet=Decimal("1.0"), ts=datetime(2025, 8, 13),
+                      yil=2025, periyot="6 Aylık"),
+        _zincir_kayit(2, gelir_ozet=Decimal("5.2"), ts=datetime(2026, 3, 11),
+                      yil=2025, periyot="Yıllık"),
+        _zincir_kayit(3, gelir_ozet=Decimal("2.0"), ts=datetime(2026, 8, 5),
+                      yil=2026, periyot="6 Aylık"),
+        _zincir_kayit(4, gelir_ozet=Decimal("5.3"), ts=datetime(2027, 3, 9),
+                      yil=2026, periyot="Yıllık"),
     ]
     satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("TEST")])
     assert [s.karar for s in satirlar] == [
@@ -261,8 +266,10 @@ def test_toleranstan_sonra_farkli_kriterde_asim_eler():
     Gelirden toleransa düşen şirket, sonraki dönem BORÇTA aşarsa elenir.
     """
     kayitlar = [
-        _zincir_kayit(1, gelir_ozet=Decimal("5.2"), ts=datetime(2025, 8, 13)),
-        _zincir_kayit(2, borc_ozet=Decimal("34.0"), ts=datetime(2026, 3, 11)),
+        _zincir_kayit(1, gelir_ozet=Decimal("5.2"), ts=datetime(2025, 8, 13),
+                      yil=2025, periyot="6 Aylık"),
+        _zincir_kayit(2, borc_ozet=Decimal("34.0"), ts=datetime(2026, 3, 11),
+                      yil=2025, periyot="Yıllık"),
     ]
     satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("TEST")])
     assert [s.karar for s in satirlar] == ["TOLERANSTA", "UYGUN_DEGIL"]
@@ -273,9 +280,12 @@ def test_belirsiz_tolerans_durumunu_sifirlamaz():
     """Kural 2'nin zincirdeki karşılığı: veri eksikliği 'temize çıkma' değil."""
     eksik = dict(BEYANLAR_TEMIZ, b4_5=None)
     kayitlar = [
-        _zincir_kayit(1, gelir_ozet=Decimal("5.2"), ts=datetime(2025, 8, 13)),
-        _zincir_kayit(2, ts=datetime(2026, 3, 11), beyanlar=eksik),
-        _zincir_kayit(3, gelir_ozet=Decimal("5.1"), ts=datetime(2026, 8, 5)),
+        _zincir_kayit(1, gelir_ozet=Decimal("5.2"), ts=datetime(2025, 8, 13),
+                      yil=2025, periyot="6 Aylık"),
+        _zincir_kayit(2, ts=datetime(2026, 3, 11), beyanlar=eksik,
+                      yil=2025, periyot="Yıllık"),
+        _zincir_kayit(3, gelir_ozet=Decimal("5.1"), ts=datetime(2026, 8, 5),
+                      yil=2026, periyot="6 Aylık"),
     ]
     satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("TEST")])
     assert [s.karar for s in satirlar] == ["TOLERANSTA", "BELIRSIZ", "UYGUN_DEGIL"]
@@ -304,9 +314,11 @@ def test_zincir_boslugu_isaretleniyor_durum_tasiniyor():
     Spec bu durumu tanımlamıyor — karar kullanıcıya bırakıldı.
     """
     kayitlar = [
-        _zincir_kayit(1, gelir_ozet=Decimal("5.2"), ts=datetime(2025, 8, 13)),
-        # 1 yıldan uzun sessizlik: arada bir dönem atlanmış
-        _zincir_kayit(2, gelir_ozet=Decimal("5.1"), ts=datetime(2026, 9, 20)),
+        _zincir_kayit(1, gelir_ozet=Decimal("5.2"), ts=datetime(2025, 8, 13),
+                      yil=2025, periyot="6 Aylık"),
+        # 1 yıldan uzun sessizlik: ARADA BİR DÖNEM ATLANMIŞ
+        _zincir_kayit(2, gelir_ozet=Decimal("5.1"), ts=datetime(2026, 9, 20),
+                      yil=2026, periyot="6 Aylık"),
     ]
     satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("TEST")])
     assert satirlar[0].zincir_notu == panel.ZINCIR_TEMIZ
@@ -319,8 +331,8 @@ def test_zincir_boslugu_isaretleniyor_durum_tasiniyor():
 def test_bosluk_esigi_altindaki_aralik_isaretlenmez():
     """Normal yarıyıl kadansı (ölçülen medyan 185 gün) boşluk değildir."""
     kayitlar = [
-        _zincir_kayit(1, ts=datetime(2025, 8, 13)),
-        _zincir_kayit(2, ts=datetime(2026, 3, 11)),   # 210 gün
+        _zincir_kayit(1, ts=datetime(2025, 8, 13), yil=2025, periyot="6 Aylık"),
+        _zincir_kayit(2, ts=datetime(2026, 3, 11), yil=2025, periyot="Yıllık"),
     ]
     satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("TEST")])
     assert all(s.zincir_notu == panel.ZINCIR_TEMIZ for s in satirlar)
@@ -367,6 +379,136 @@ def test_panel_csv_semasi_spec_15():
 def _sirket_kaydi(ticker, muaf=False):
     return Sirket(ticker=ticker, unvan=f"{ticker} A.Ş.", kap_member_uuid="u",
                   kap_kfif_slug=None, mali_sektor_muaf=muaf)
+
+
+# ===== Faz 2.3 — düzeltme çözümü ve DÖNEM bazlı zincir =====================
+#
+# Gerçek veriden sabitlenmiş regresyon vakaları. Değerler
+# `veri/panel/panel.csv`'den alındı ama teste GÖMÜLÜ — arşiv olmadan da
+# koşar (veri/ git dışı).
+
+
+def _d(bid, gun, *, gelir, izi="", yil=2025, periyot="6 Aylık", ticker="X"):
+    k = _zincir_kayit(bid, gelir_ozet=Decimal(str(gelir)), ts=gun,
+                      ticker=ticker, yil=yil, periyot=periyot)
+    k.duzeltme_izi = izi
+    return k
+
+
+def test_pnlsn_ayni_donem_uc_bildirim_zinciri_ilerletmez():
+    """PNLSN 2025/6 Aylık: 3 bildirim, hiçbiri diğerinin 'önceki dönemi' değil.
+
+    Eski kod (bildirim bazlı zincir) ilk kaydın TOLERANSTA'sını sonrakilere
+    'önceki dönem' diye taşıyordu. Aynı dönemin düzeltmesi YENİ DÖNEM DEĞİL.
+    """
+    kayitlar = [
+        _d(1475001, datetime(2025, 8, 8, 18, 10), gelir="5.30", izi="DUZELTILEN"),
+        _d(1477986, datetime(2025, 8, 13, 21, 17), gelir="4.77", izi="DUZENLENEN"),
+        _d(1486639, datetime(2025, 9, 4, 23, 18), gelir="4.75"),
+    ]
+    satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("X")])
+    assert [s.karar for s in satirlar] == ["TOLERANSTA", "UYGUN", "UYGUN"]
+    assert all(s.onceki_donem_tolerans is False for s in satirlar),         "aynı dönemin düzeltmesi 'önceki dönem' sayılmamalı"
+    # spec §3.2: en geç kayıt geçerli, eskiler SİLİNMEZ
+    assert [s.gecerli_kayit for s in satirlar] == [False, False, True]
+
+
+def test_dcttr_duzeltme_artefakti_kapandi():
+    """DCTTR: 2025/Yıllık'ın iki bildirimi de TOLERANSTA.
+
+    Eski kodda ikinci bildirim birincisini 'önceki dönem' sanıp
+    UYGUN_DEGIL üretiyordu — 3.1'in çevirdiği 5 satırın biri buydu ve
+    4.0'da XKTUM üyesi bir şirkette SAHTE uyuşmazlık açıyordu.
+    """
+    kayitlar = [
+        _d(1474028, datetime(2025, 8, 7, 18, 14), gelir="0.75"),
+        _d(1570089, datetime(2026, 3, 10, 22, 28), gelir="4.97",
+           izi="DUZELTILEN", periyot="Yıllık"),
+        _d(1585103, datetime(2026, 4, 6, 18, 16), gelir="4.66",
+           izi="DUZENLENEN", periyot="Yıllık"),
+    ]
+    satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("X")])
+    kararlar = [s.karar for s in satirlar]
+    assert kararlar == ["UYGUN", "UYGUN", "UYGUN"], kararlar
+    assert all(s.onceki_donem_tolerans is False for s in satirlar)
+
+
+def test_onceki_donem_durumu_nokta_zaman():
+    """Look-ahead: P(n)'in gördüğü durum, P(n-1)'in O ANDA geçerli kaydından.
+
+    P1 önce TOLERANSTA yayımlanıyor, P2 ondan sonra geliyor (aşımla) ve
+    ELENMELİ. P1 daha sonra düzeltilip temizlenirse, P2'nin GEÇMİŞTEKİ
+    etiketi değişmez — o kayıt kendi penceresinde canlıydı.
+    """
+    kayitlar = [
+        _d(1, datetime(2025, 8, 10), gelir="5.20"),                    # P1 toleransta
+        _d(2, datetime(2026, 3, 10), gelir="5.10", periyot="Yıllık"),  # P2 -> elenmeli
+        _d(3, datetime(2026, 4, 10), gelir="1.00"),                    # P1 düzeltmesi: temiz
+    ]
+    satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("X")])
+    d = {s.bildirim_id: s for s in satirlar}
+    assert d[1].karar == "TOLERANSTA"
+    assert d[2].karar == "UYGUN_DEGIL", "P2 kendi anında P1 toleranslıydı"
+    assert d[2].onceki_donem_tolerans is True
+    assert d[3].karar == "UYGUN"
+
+
+def test_duzeltme_olayi_alanlari():
+    """Olay: değişen oranlar + değişen beyanlar + HAYIR<->EVET bayrağı."""
+    from katilim import toplayici
+
+    k1 = _d(1, datetime(2025, 8, 8), gelir="5.30")
+    k2 = _d(2, datetime(2025, 8, 13), gelir="4.77", izi="DUZENLENEN")
+    k2.bildirim.beyanlar = dict(BEYANLAR_TEMIZ, b4_1=True)   # HAYIR -> EVET
+    gecerli, olaylar = toplayici.duzeltmeleri_coz([k1, k2])
+
+    assert len(gecerli) == 1 and gecerli[0].bildirim_id == 2, "en geç kazanır"
+    assert len(olaylar) == 1
+    o = olaylar[0]
+    assert o.ilk_bildirim_id == 1 and o.duzeltme_bildirim_id == 2
+    assert o.duzeltme_izi == "DUZENLENEN"
+    assert o.degisen_oranlar["gelir"] == (Decimal("5.30"), Decimal("4.77"))
+    assert o.degisen_beyanlar["b4_1"] == (False, True)
+    assert o.karar_ceviren_beyan is True
+
+
+def test_beyan_none_a_donerse_karar_ceviren_sayilmaz():
+    """None <-> bool veri EKSİKLİĞİ; HAYIR<->EVET ile aynı şey değil."""
+    from katilim import toplayici
+
+    k1 = _d(1, datetime(2025, 8, 8), gelir="1.0")
+    k2 = _d(2, datetime(2025, 8, 13), gelir="1.0")
+    k2.bildirim.beyanlar = dict(BEYANLAR_TEMIZ, b4_1=None)
+    _, olaylar = toplayici.duzeltmeleri_coz([k1, k2])
+    assert olaylar[0].degisen_beyanlar["b4_1"] == (False, None)
+    assert olaylar[0].karar_ceviren_beyan is False
+
+
+def test_uc_bildirim_iki_olay_uretir():
+    from katilim import toplayici
+
+    kayitlar = [
+        _d(1, datetime(2025, 8, 8), gelir="5.30"),
+        _d(2, datetime(2025, 8, 13), gelir="4.77"),
+        _d(3, datetime(2025, 9, 4), gelir="4.75"),
+    ]
+    gecerli, olaylar = toplayici.duzeltmeleri_coz(kayitlar)
+    assert len(olaylar) == 2 and len(gecerli) == 1
+    assert [o.kayit_sayisi for o in olaylar] == [3, 3]
+
+
+def test_is_duzeltme_metin_aramasindan_gelmiyor():
+    """2.3: parser artık sayfa metninde 'düzeltme' ARAMIYOR.
+
+    Kaynak yapılandırılmış (`isChanged`); alan toplama katmanında set
+    ediliyor. Parser'ın kendi başına True üretmemesi gerekiyor.
+    """
+    import inspect
+
+    from katilim import ayristirici
+
+    kod = inspect.getsource(ayristirici)
+    assert 'is_duzeltme = "duzeltme"' not in kod, "metin araması geri gelmiş"
 
 
 if __name__ == "__main__":

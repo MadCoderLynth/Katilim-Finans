@@ -227,7 +227,11 @@ def ayristir(
         g, ay, yil, sa, dk, sn = (int(x) for x in mt.groups())
         b.gonderim_ts = datetime(yil, ay, g, sa, dk, sn)
 
-    b.is_duzeltme = "duzeltme" in normalize(tam_metin[:4000])
+    # `is_duzeltme` BURADA BELİRLENMİYOR (2.3'te metin araması kaldırıldı).
+    # Eski yol sayfa metninde "düzeltme" arıyordu; hiç doğrulanmamıştı ve
+    # sayfanın i18n sözlüğüne bağımlıydı. Gerçek kaynak yapılandırılmış:
+    # bildirim sorgusunun RSC yükündeki `isChanged` alanı (DUZENLENEN /
+    # DUZELTILEN). Alan, toplama katmanında indeksten set ediliyor.
 
     if not b.kalemler:
         raise AyristirmaHatasi(
