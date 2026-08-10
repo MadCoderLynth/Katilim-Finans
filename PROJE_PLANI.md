@@ -1184,15 +1184,75 @@ dayanıyor ve yanlış eşleme sahte uyuşmazlık üretir.
 Ham PDF'leri veri/referans/ham/ altında sakla.
 ```
 
-**Çıkış kriteri:** En az 4 endeks dönemi için bileşen listesi var; KAFİF
-dönemi ↔ endeks dönemi eşlemesi yazılı.
+**Çıkış kriteri:** ✔ 5 dönem kuruldu (2024-07 … 2026-05), eşleme ölçüldü.
+
+### 4.1b — Daha eski dönem PDF'leri *(opsiyonel, 5.2 için)*
+
+> 4.2 için değersiz, **5.2 için doğrudan değerli.** Karar: topla.
+
+```
+Görev: 01.07.2024 öncesine ait dönemsel değişiklik PDF'lerini ara.
+
+Gerekçe — 4.2 için DEĞİL: o dönemlerin KAFİF'i yok ve gelmeyecek
+(pencere kaydı). Mutabakat değeri kalıcı olarak sıfır.
+
+Gerekçe — 5.2 için EVET: bir endeks çıkışını tespit etmek için KAFİF'e
+gerek yok, iki ardışık bileşen listesi yeterli. Elimizdeki 4 sınır 248
+olay veriyor (99 giriş, 149 çıkış); her yeni sınır ~50 olay daha
+ekliyor ve getiri dağılımı çalışmasının örneklemi doğrudan bu.
+
+DİKKAT — PDF'ler bildirim kimliği TAŞIMIYOR, yalnız pay kodu listesi.
+"Eski PDF'lerden 2024 öncesi bildirim kimliği çıkarsa erişim ufku
+sınanır" fikri YANLIŞTI; o sınama bu yoldan yapılamaz.
+
+Başlangıç tarihi bilinmeyen dönem CSV'ye YAZILMAZ (4.1 kuralı):
+tarihsiz dönem 5.2'de de kullanılamaz, çünkü olay tarihi yok.
+Bir listenin başlangıcı belirlenemiyorsa o listeyi atla ve raporla.
+
+Bütçe: 10 istek. Bulunamıyorsa zorlamayın — 248 olay 5.2 için zaten
+yeterli bir taban.
+```
+
+**Çıkış kriteri:** Bulunan her yeni dönem için başlangıç/bitiş tarihi
+belirli; `xktum_bilesenler.csv` genişletildi; yeni olay sayısı raporlandı.
 
 ---
 
 ## 4.2 — Mutabakat koşumu
 
 ```
-Görev: Kendi kararlarımızı resmî listeyle karşılaştır.
+Görev: Kendi kararlarımızı resmî listeyle karşılaştır — DURUM DEĞİL DEĞİŞİM.
+
+⚠ **BU ADIM 4.0'DAN NİTELİKSEL OLARAK FARKLI VE ASIL SINAMA BURADA.**
+4.0 nokta-zaman durum karşılaştırmasıydı ve bilgilendirici vaka sayısı
+2'ydi; kayıtların çoğu uygunluğun değişmediği kararlı vakalardı ve orada
+yarım çalışan bir motor da uyuşur. 4.1 ölçtü: iki kullanılabilir revizyon
+sınırında **98 giriş-çıkış olayı** var (2025-05→10: 23 giren + 29 çıkan;
+2025-10→2026-05: 27 giren + 19 çıkan). H1-H4 ilk kez gücü olan bir
+örneklemle karşılaşıyor. Karşılaştırma DURUMU değil DEĞİŞİMİ eşlemeli:
+her giriş/çıkış için "bizim panelimiz o sınırda bir değişim gösterdi mi,
+gösterdiyse aynı yönde mi".
+
+4.1'İN İKİ DÜZELTMESİ ZORUNLU — yoksa sahte uyuşmazlık üretir:
+1. `mutabakat.py:49` REVIZYON_AYLARI = (5, 10) SİL. Takvim düzenli
+   değil: 01.07.2024 → 01.12.2024 → 01.05.2025 → 01.10.2025 →
+   01.05.2026. Tarihler xktum_bilesenler.csv'nin donem_baslangic
+   sütunundan OKUNUR, ay sabitinden türetilmez.
+2. Kesim noktası yürürlük değil DUYURU tarihi (4-7 gün önce, n=5).
+   Duyurudan sonra yayımlanan KAFİF o revizyonu etkileyemez.
+   Doğru ölçütle DONEM_UYUMSUZLUGU 7 → 18 çıkıyor.
+
+BİLİNEN SINIR — olağanüstü çıkarmalar dönemsel PDF'lerde görünmüyor
+(4.1: EFORC, DAGHL, PEHOL geriye yürümede tutmuyor, üçü de bugünkü
+evrende yok). Bir çıkışı açıklayamıyorsan "olağanüstü çıkarma" ihtimalini
+uyuşmazlık saymadan önce ayrı sınıfla.
+
+İZLENECEK SOMUT İZ — 4.1'de görüldü: ASUZU ve BEYAZ 2025/6 Aylık'ta
+`b1_1`'i False→True düzeltti ve ikisi de 01.10.2025'te endeksten çıktı.
+Düzeltme geldi, sonra endeks işledi. Bu, G1 kapısının çalıştığına dair
+ilk somut kanıt; 2.3'ün 14 karar-çeviren düzeltmesinin kaçının bir
+endeks çıkışıyla eşlendiğini SAY. (BORLS'u sayma: düzeltmesi çıkışından
+sonra.)
 
 Yeni modül: katilim/mutabakat.py
 - karsilastir(panel, referans, donem) -> uyusmazlik listesi

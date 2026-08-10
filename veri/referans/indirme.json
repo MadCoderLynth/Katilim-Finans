@@ -1,0 +1,47 @@
+[
+ {
+  "donem_baslangic": "2024-07-01",
+  "donem_bitis": "2024-11-30",
+  "url": "https://www.borsaistanbul.com/files/bist-katilim-endeksleri-donemsel-degisiklikleri.pdf",
+  "dosya": "katilim_endeksleri_20240701_20241130.pdf",
+  "http": 200,
+  "durum": "INDIRILDI",
+  "bayt": 188950
+ },
+ {
+  "donem_baslangic": "2024-12-01",
+  "donem_bitis": "2025-04-30",
+  "url": "https://www.borsaistanbul.com/files/bist-katilim-endeksleri-01-12-2024-30-04-2025-donemi-degisiklikleri.pdf",
+  "dosya": "katilim_endeksleri_20241201_20250430.pdf",
+  "http": 200,
+  "durum": "INDIRILDI",
+  "bayt": 213061
+ },
+ {
+  "donem_baslangic": "2025-05-01",
+  "donem_bitis": "2025-09-30",
+  "url": "https://borsaistanbul.com/files/bist-katilim-endeksleri-01052025-30092025-donemi-degisiklikleri.pdf",
+  "dosya": "katilim_endeksleri_20250501_20250930.pdf",
+  "http": 200,
+  "durum": "INDIRILDI",
+  "bayt": 1048247
+ },
+ {
+  "donem_baslangic": "2025-10-01",
+  "donem_bitis": "2026-04-30",
+  "url": "https://www.borsaistanbul.com/files/bist-katilim-endeksleri-donemsel-degisiklikleri-1.pdf",
+  "dosya": "katilim_endeksleri_20251001_20260430.pdf",
+  "http": 200,
+  "durum": "INDIRILDI",
+  "bayt": 146692
+ },
+ {
+  "donem_baslangic": "2026-05-01",
+  "donem_bitis": "2026-09-30",
+  "url": "https://www.borsaistanbul.com/files/bist-katilim-endeksleri-donemsel-degisiklikleri-01052026%E2%80%9330092026.pdf",
+  "dosya": "katilim_endeksleri_20260501_20260930.pdf",
+  "http": 200,
+  "durum": "INDIRILDI",
+  "bayt": 191115
+ }
+]

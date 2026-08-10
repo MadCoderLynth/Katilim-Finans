@@ -12,8 +12,15 @@ venv/
 veri/ham/*
 veri/panel/*
 veri/onbellek/*
-veri/referans/*
 !veri/*/.gitkeep
+
+# İSTİSNA — veri/referans/ TAMAMEN git'e girer, ham PDF'ler dahil (4.1 kararı).
+# BIST dönemsel değişiklik PDF'lerinin URL'leri kalıcı değil; kaybolursa
+# bileşen listesi yeniden kurulamaz. veri/ham'ı dışarıda tutan gerekçe
+# BOYUTTU (239 MB), ilke değil — burada toplam 2,1 MB, o kısıt işlemiyor.
+# kurulum_tanilari.json özellikle değerli: yöntemin bilinen sınırlarını
+# (geriye yürümede tutmayan 3 kod) taşıyor.
+!veri/referans/**
 
 # İSTİSNA — veri/evren/ git'e GİRER (1.4a kararı).
 # 1.4a ölçtü: pencere keşfi öldürüyor, erişimi değil (15/15 indi, 404 yok).

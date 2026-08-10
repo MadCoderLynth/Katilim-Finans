@@ -1,0 +1,58 @@
+{
+ "donemler": [
+  {
+   "baslangic": "2024-07-01",
+   "bitis": "2024-11-30",
+   "uye": 293,
+   "kaynak": "katilim_endeksleri_20241201_20250430.pdf"
+  },
+  {
+   "baslangic": "2024-12-01",
+   "bitis": "2025-04-30",
+   "uye": 257,
+   "kaynak": "katilim_endeksleri_20250501_20250930.pdf"
+  },
+  {
+   "baslangic": "2025-05-01",
+   "bitis": "2025-09-30",
+   "uye": 241,
+   "kaynak": "katilim_endeksleri_20251001_20260430.pdf"
+  },
+  {
+   "baslangic": "2025-10-01",
+   "bitis": "2026-04-30",
+   "uye": 235,
+   "kaynak": "katilim_endeksleri_20260501_20260930.pdf"
+  },
+  {
+   "baslangic": "2026-05-01",
+   "bitis": "2026-09-30",
+   "uye": 243,
+   "kaynak": "endeks_uyeligi.csv (KAP, 2026-08-08)"
+  }
+ ],
+ "tutarsizlik": [
+  {
+   "donem": "2025-05-01",
+   "giren_ama_uye_degil": [
+    "EFORC"
+   ],
+   "cikan_ama_hala_uye": [],
+   "evrende_olmayan": [
+    "EFORC"
+   ]
+  },
+  {
+   "donem": "2024-12-01",
+   "giren_ama_uye_degil": [
+    "DAGHL",
+    "PEHOL"
+   ],
+   "cikan_ama_hala_uye": [],
+   "evrende_olmayan": [
+    "DAGHL",
+    "PEHOL"
+   ]
+  }
+ ]
+}

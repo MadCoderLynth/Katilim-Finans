@@ -1,2 +1,4 @@
 beautifulsoup4>=4.12
 requests>=2.31
+# yalnız arac/xktum_referans.py ve testi kullanır; katilim/ paketi bağlı DEĞİL
+pdfplumber>=0.11

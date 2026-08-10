@@ -277,7 +277,22 @@ Ham içerik doğrudan HTML gövdesinde; PDF/ek indirmesi gerekmiyor.
 Uygunluk etiketinin geçerli olduğu ilk an = **KAFİF'in KAP gönderim zaman damgası**. Bilanço dönemi değil, endeks yürürlük tarihi değil. Bu alan bildirimde saniye hassasiyetinde mevcut.
 
 ### 5.2 Bilgi öncüllüğü
-KAFİF, finansal tablolar ilan edildikten en geç 1 işlem günü sonra yayımlanmak zorunda. Endeks revizyonu ise dönem başında (1 Mayıs / 1 Ekim) yürürlüğe giriyor. Arada haftalarca süren bir pencere var:
+
+> ### ⚠ REVİZYON TAKVİMİ DÜZENLİ DEĞİL — VARSAYMAYIN, OKUYUN (4.1 ölçümü, 10 Ağu 2026)
+>
+> Aşağıdaki "1 Mayıs / 1 Ekim" tarifi **yanlışlandı.** Borsa İstanbul'un kendi dönemsel değişiklik PDF'lerinin başlıkları:
+>
+> ```
+> 01.07.2024 ─5 ay─▶ 01.12.2024 ─5 ay─▶ 01.05.2025 ─5 ay─▶ 01.10.2025 ─7 AY─▶ 01.05.2026
+> ```
+>
+> 2024'te takvim **Temmuz/Aralık**tı; Mayıs/Ekim ritmi 01.05.2025'te başlıyor ve 01.10.2025–30.04.2026 **7 ay** sürüyor. Takvim `veri/referans/xktum_bilesenler.csv`'nin `donem_baslangic`/`donem_bitis` sütunlarından **okunur**, ay sabitinden türetilmez. `katilim/mutabakat.py`'deki `REVIZYON_AYLARI = (5, 10)` bugünkü nokta-zaman ölçümü için doğru sonuç veriyor ama tarihsel mutabakatta yanlış — 4.2 düzeltecek.
+>
+> **Ayrıca: gerçek veri kesim noktası yürürlük tarihi değil DUYURU tarihidir.** BIST listeyi yürürlükten **4–7 gün önce** duyuruyor (ölçüldü, n=5; 01.05.2026 için 27.04.2026 duyuru sayfasından bağımsız doğrulandı). Duyurudan sonra yayımlanan KAFİF o revizyonu etkileyemez.
+>
+> **Ölçülmüş dönem eşlemesi:** 6 Aylık dalgası → o yılın Ekim revizyonu; Yıllık dalgası → ertesi yılın Mayıs revizyonu. Medyan öncüllük 6–8 hafta. Ayrıntı ve sayım: `XKTUM_REFERANS_RAPORU.md` §5.
+
+KAFİF, finansal tablolar ilan edildikten en geç 1 işlem günü sonra yayımlanmak zorunda. Endeks revizyonu ise dönem başında (yukarıdaki uyarıya bakın — güncel ritim 1 Mayıs / 1 Ekim, ama takvim tarihsel olarak kaymış) yürürlüğe giriyor. Arada haftalarca süren bir pencere var:
 
 ```
 KAFİF yayını  ──────► [bilgi kamuya açık, endeks henüz değişmedi] ──────►  endeks yürürlük
@@ -285,6 +300,27 @@ KAFİF yayını  ──────► [bilgi kamuya açık, endeks henüz deği
 ```
 
 Bu pencerede uygunluk kaybı hesaplanabiliyor ama katılım fonlarının zorunlu satışı henüz gerçekleşmemiş oluyor.
+
+> ### ⚠ PENCERE YUKARIDAKİ ŞEMADAN DAR — iki ölçüm onu kırpıyor
+>
+> Yukarıdaki 4-8 hafta **ham** penceredir. İki ölçüm onu iki ucundan kesiyor:
+>
+> - **Baştan: düzeltme penceresi** (2.3, n=181) — medyan 21 gün, p95 **38 gün**, max 55. Karar çeviren 14 düzeltmenin hepsi ≤31 gün. Bu süre geçmeden KAFİF'in gösterdiği aşım güvenilir değil; DOGUB 2025/6 Aylık'ı %8,09 ile verip beş hafta sonra %0,92'ye düzeltti.
+> - **Sondan: duyuru tarihi** (4.1, n=5) — endeks kararı yürürlükten değil **duyurudan** itibaren kamuya mal olur, o da yürürlükten 4-7 gün önce.
+>
+> ```
+> KAFİF        +21g (medyan)   +38g (p95)              duyuru      yürürlük
+>   │             │               │                      │            │
+>   ▼             ▼               ▼                      ▼            ▼
+>   ├─ düzeltme riski ───────────┤                       │            │
+>   │                            ├── BİLGİ AVANTAJI ─────┤            │
+>   │                                                    ├─ herkes ───┤
+>   └──────────────── ham pencere (4-8 hafta) ────────────────────────┘
+> ```
+>
+> Somut hesap: DOGUB 2026/6 Aylık 30.07.2026'da yayımlandı; 01.10.2026 yürürlüğü ~25.09'da duyurulacak → karar penceresi 57 gün. p95 düzeltme penceresi çıkınca **~19 gün** kalıyor.
+>
+> **Sonuç: bilgi avantajı penceresi 2-3 hafta, 4-8 hafta değil.** Hız/kesinlik ödünleşmesi bu yüzden gerçek bir ödünleşme: medyanda (21 gün) işlem etmek pencereyi genişletir ama düzeltme riskini üstlenir. Faz 5.2 iki rejimi ayrı ölçecek; etkinin varlığı değil, bu dar pencerede işlem maliyetini aşacak kadar büyük olup olmadığı sorusu belirleyici.
 
 ### 5.3 Ölçülecek
 - XKTUM'dan çıkan hisselerin, (a) KAFİF yayın tarihi ve (b) endeks yürürlük tarihi etrafındaki getiri dağılımı

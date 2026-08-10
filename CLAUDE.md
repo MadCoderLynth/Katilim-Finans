@@ -19,6 +19,7 @@ python3 -m katilim.cli indir --butce 2600                 # formları arşivle (
 python3 -m katilim.cli panel                              # snapshot paneli (Faz 1.4b)
 python3 -m katilim.cli ozet --butce 800                   # pazar/sektör/endeks (Faz 1.1b)
 python3 -m katilim.cli mutabakat                          # ön mutabakat (Faz 4.0)
+python3 arac/xktum_referans.py --indir --ayristir --kur    # XKTUM referansı (Faz 4.1)
 python3 -m katilim.cli dogrula veri/ham/DOSYA.html        # ayrıştır + self-check + karar
 python3 -m katilim.cli dok veri/ham/DOSYA.html            # tanı: tabloları imzalarıyla dök
 python3 -m katilim.cli toplu veri/ham --csv veri/panel/panel.csv
@@ -122,13 +123,48 @@ onunla çelişirse plan değil bu dosya esastır.
 Biten: **Faz 0** · **1.0** rota keşfi · **1.1** evren · **2.0** derinlik
 keşfi · **1.2** bildirim sorguları · **1.4a** form arşivi · **1.3** parser
 kapısı · **1.4b** snapshot paneli · **1.1b** özet sayfaları · **4.0** ön
-mutabakat · **2.3** düzeltme çözümü · **3.1** tolerans zinciri.
-Testler: 168 geçiyor (24 motor + 9 çekici + 24 evren + 8 derinlik +
+mutabakat · **2.3** düzeltme çözümü · **3.1** tolerans zinciri ·
+**4.1** XKTUM tarihsel referansı.
+Testler: 183 geçiyor (24 motor + 9 çekici + 24 evren + 8 derinlik +
 16 bildirim + 7 rsc + 13 toplayıcı + 9 pilot + 28 panel + 20 özet +
-12 mutabakat).
+12 mutabakat + 13 xktum).
 
-Sıradaki: **3.2** (belirsiz bant / PD paydası — PD kaynağı sorusu açık),
-**2.2** (şablon versiyonlama) veya **2.0b**. Hiçbiri aciliyetli değil.
+Sıradaki: **4.2** (tarihsel mutabakat — 4.1'in referansı hazır),
+**3.2** (belirsiz bant / PD paydası — PD kaynağı sorusu açık),
+**2.2** (şablon versiyonlama) veya **2.0b**.
+
+**Faz 4.1 bitti — XKTUM bileşen listesi 5 dönem için kuruldu.** Ayrıntı:
+@XKTUM_REFERANS_RAPORU.md (`arac/xktum_referans.py`, 5 istek, KAP'a 0).
+
+- **REVİZYON TAKVİMİ DÜZENLİ DEĞİL.** Spec'in "1 Mayıs / 1 Ekim"i
+  yanlışlandı: `01.07.2024 → 01.12.2024 → 01.05.2025 → 01.10.2025 →
+  01.05.2026`. 2024'te Temmuz/Aralık'tı; 01.10.2025–30.04.2026 **7 ay**.
+  Takvim CSV'den okunur, ay sabitinden türetilmez. Spec §5.2 aynı
+  commit'te güncellendi. `mutabakat.py:49`'daki `REVIZYON_AYLARI = (5, 10)`
+  bugün için doğru sonuç veriyor, **tarihsel mutabakatta yanlış — 4.2'nin işi.**
+- **Kesim noktası yürürlük değil DUYURU tarihi** (4–7 gün önce, n=5;
+  27.04.2026 duyuru sayfasından bağımsız doğrulandı). Boşluğun bugünkü
+  etkisi **1 kayıt** (KUVVA), ama doğru ölçüt bu.
+- **Dönem eşlemesi ÖLÇÜLDÜ:** 01.10.2025 ← **2025/6 Aylık** (557/571),
+  01.05.2026 ← **2025/Yıllık** (606/610). Daha eski üç revizyonun KAFİF
+  karşılığı **hiç yok** — tarihsel mutabakat fiilen **2 dönem** üzerinden
+  yürüyecek.
+- **`DONEM_UYUMSUZLUGU` 7 değil 18.** 4.0 kaba ölçüt kullanmıştı
+  ("01.05.2026'dan sonra"); duyuru tarihiyle sınıf büyüyor. 4.0 yeniden
+  KOŞTURULMADI — bu adım girdi üretti, sınıflandırma revize etmedi.
+- **Ayıklama sayfa değil BANT bazlı.** XKTUM listesi 2. sayfaya taşıyor ve
+  altında KATILIM 100 tablosu var; sayfa imzası ikisini birden alıyordu
+  (31/65 yerine 54/72). **Hatayı `yedek` sayacı yakaladı** — XKTUM'da
+  yedek pay listesi olmaz. Artık hata fırlatıyor.
+- **PDF'in kendi NO sütunu self-check.** 5/5 GEÇTİ. Kaynağın kendi
+  sayımını kapı olarak kullanmak, KAFİF self-check'iyle aynı disiplin.
+- **3 kod geriye yürümede tutmuyor** (EFORC, DAGHL, PEHOL) ve üçü de
+  bugünkü evrende yok: **olağanüstü çıkarmalar dönemsel PDF'lerde
+  görünmez.** Yöntemin bilinen sınırı; `kurulum_tanilari.json`'da kayıtlı.
+- **`HAYIR` yalnız bugünkü evren için yazılıyor** — borsadan çıkmış kod
+  hakkında görüşümüz yok. 01.07.2024 öncesi dönem CSV'ye **yazılmadı**:
+  başlangıç tarihi bilinmiyor, tarihsiz dönem 4.2'de kullanılamaz.
+- **Yeni bağımlılık `pdfplumber`** — yalnız `arac/` ve testi kullanıyor.
 
 **Faz 2.3 bitti — düzeltme çözüldü, zincir dönem bazına alındı.** Ayrıntı:
 @DUZELTME_RAPORU.md (`duzeltmeleri_coz`, `panel_uret` yeniden yazıldı).
