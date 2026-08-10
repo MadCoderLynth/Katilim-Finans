@@ -346,6 +346,44 @@ BILESEN_BASLIKLARI = [
     "ticker", "donem_baslangic", "donem_bitis", "endekste_mi", "kaynak_dosya",
 ]
 
+# 4.2 iki yardımcı tablo daha istiyor. Sebep: `katilim/` paketi PDF'lere
+# (ve `pdfplumber`'a) bağlanmamalı; mutabakat bu CSV'lerden okur.
+DONEM_BASLIKLARI = [
+    "donem_baslangic", "donem_bitis", "duyuru_tarihi", "uye_sayisi",
+    "giren_sayisi", "cikan_sayisi", "kaynak_dosya",
+]
+OLAY_BASLIKLARI = ["ticker", "donem_baslangic", "olay", "kaynak_dosya"]
+DONEM_CSV = REFERANS / "xktum_donemler.csv"
+OLAY_CSV = REFERANS / "xktum_olaylar.csv"
+
+
+def donem_ve_olay_tablolari(degisimler, tanilar) -> tuple[list[dict], list[dict]]:
+    """Dönem sınırları (+DUYURU tarihi) ve giriş/çıkış olayları.
+
+    Olaylar **PDF'in kendi listelerinden** geliyor, bileşen kümelerinin
+    farkından değil: fark almak, geriye yürümede tutmayan üç kodu
+    (EFORC/DAGHL/PEHOL) sessizce yutardı.
+    """
+    uye = {t["baslangic"]: t["uye"] for t in tanilar["donemler"]}
+    donemler, olaylar = [], []
+    for d in degisimler:
+        donemler.append({
+            "donem_baslangic": d.donem_baslangic,
+            "donem_bitis": d.donem_bitis,
+            "duyuru_tarihi": d.duyuru_tarihi,
+            "uye_sayisi": uye.get(d.donem_baslangic, ""),
+            "giren_sayisi": len(d.giren),
+            "cikan_sayisi": len(d.cikan),
+            "kaynak_dosya": d.kaynak_dosya,
+        })
+        for t in d.giren:
+            olaylar.append({"ticker": t, "donem_baslangic": d.donem_baslangic,
+                            "olay": "GIREN", "kaynak_dosya": d.kaynak_dosya})
+        for t in d.cikan:
+            olaylar.append({"ticker": t, "donem_baslangic": d.donem_baslangic,
+                            "olay": "CIKAN", "kaynak_dosya": d.kaynak_dosya})
+    return donemler, olaylar
+
 
 def kur(degisimler: list[DonemDegisimi], uyeler: set[str], olcum: str,
         evren: set[str]) -> tuple[list[dict], dict]:
@@ -476,6 +514,15 @@ def main() -> int:
         (REFERANS / "kurulum_tanilari.json").write_text(
             json.dumps(tanilar, ensure_ascii=False, indent=1), encoding="utf-8")
         print(f"\n  {len(satirlar):,} satır -> {BILESEN_CSV}")
+
+        donemler, olaylar = donem_ve_olay_tablolari(degisimler, tanilar)
+        for yol, basliklar, veri in ((DONEM_CSV, DONEM_BASLIKLARI, donemler),
+                                     (OLAY_CSV, OLAY_BASLIKLARI, olaylar)):
+            with open(yol, "w", encoding="utf-8", newline="") as f:
+                y = csv.DictWriter(f, fieldnames=basliklar)
+                y.writeheader()
+                y.writerows(veri)
+            print(f"  {len(veri):,} satır -> {yol.name}")
     return 0
 
 

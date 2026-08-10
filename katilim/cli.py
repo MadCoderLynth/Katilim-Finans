@@ -581,9 +581,84 @@ def cmd_ozet(args) -> int:
     return 1 if (kotu or kesildi) else 0
 
 
-def cmd_mutabakat(args) -> int:
-    """Faz 4.0 — kararlarımız vs. bugünkü XKTUM üyeliği. Ağa çıkmaz."""
+def _mut_donem_csv():
     from . import mutabakat
+    return mutabakat.DONEM_CSV
+
+
+def _mut_olay_csv():
+    from . import mutabakat
+    return mutabakat.OLAY_CSV
+
+
+def _cmd_mutabakat_degisim(args, mutabakat) -> int:
+    """Faz 4.2 — resmî listedeki DEĞİŞİMLE karşılaştırma. Ağa çıkmaz."""
+    sirketler = evren.oku(args.evren_csv)
+    if not sirketler:
+        print(f"{args.evren_csv} yok.", file=sys.stderr)
+        return 2
+    # Değişim modu tolerans zincirli paneli ister: nokta-zaman karar
+    # ancak dönemler arası taşınmış durumla doğru olur.
+    panel = args.panel_csv
+    if "snapshot" in str(panel) and pathlib.Path("veri/panel/panel.csv").exists():
+        panel = "veri/panel/panel.csv"
+        print(f"  not: değişim modu tolerans zincirli paneli kullanıyor ({panel})")
+    try:
+        m = mutabakat.karsilastir_degisim(
+            panel_csv=panel, donem=args.donem,
+            evren_tickerlari={s.ticker for s in sirketler},
+            donem_csv=args.donem_csv, olay_csv=args.olay_csv,
+        )
+        iz = None
+        if pathlib.Path(args.duzeltme_csv).exists():
+            iz = mutabakat.duzeltme_olay_eslemesi(
+                args.duzeltme_csv, olay_csv=args.olay_csv,
+                donem_csv=args.donem_csv,
+            )
+    except mutabakat.MutabakatGirdisiYok as e:
+        print(f"GİRDİ YOK: {e}", file=sys.stderr)
+        return 2
+
+    oran, k, n = m.uyusmazlik_orani()
+    mat = m.matris()
+    print(f"DEĞİŞİM MUTABAKATI — {m.donem.etiket} "
+          f"(kesim {m.donem.duyuru:%d.%m.%Y}, DUYURU tarihi)")
+    print(f"  olay              : {len(m.olaylar)}  {m.sinif_dagilimi()}")
+    print(f"  matris            : UYGUN/içeride {mat.get(('UYGUN','ICERIDE'),0)} · "
+          f"UYGUN_DEGIL/dışarıda {mat.get(('UYGUN_DEGIL','DISARIDA'),0)} · "
+          f"YANLIŞ POZİTİF {mat.get(('UYGUN','DISARIDA'),0)} · "
+          f"yanlış negatif {mat.get(('UYGUN_DEGIL','ICERIDE'),0)}")
+    print(f"  uyuşmazlık        : {k} / {n} = %{oran*100:.2f}")
+    for e in m.uyusmazliklar:
+        print(f"    {e.ticker:7s} {e.olay:6s} karar={e.simdiki_karar:12s} "
+              f"kod={e.simdiki_kodlar or '-':26s} [{e.hipotez}] {e.on_teshis}")
+    print("  hipotez bazında   :")
+    for h, d in mutabakat.hipotez_ozeti(m).items():
+        print(f"    {h:4s} olay={d['olay']:3d} eşleşen={d['eslesti']:3d} "
+              f"uyuşmazlık={d['uyusmazlik']}")
+    if iz:
+        print(f"  düzeltme izi      : {iz['eslesen']} eşleşen / "
+              f"{iz['ters_yon']} ters yön / {iz['karar_ceviren_duzeltme']} toplam")
+
+    taban = mutabakat.taban_oran(panel, m.donem.duyuru)
+    print(f"  taban oran        : %{taban[0]*100:.1f} UYGUN (n={taban[1]}) "
+          "— testin gücü")
+    yol = pathlib.Path(f"MUTABAKAT_{m.donem.etiket}.md")
+    yol.write_text(mutabakat.degisim_raporu(m, iz, taban), encoding="utf-8")
+    print(f"\n  rapor -> {yol}")
+    return 0
+
+
+def cmd_mutabakat(args) -> int:
+    """4.0 nokta-zaman mutabakat; `--donem` verilirse 4.2 DEĞİŞİM mutabakatı.
+
+    İki mod ayrı tutuldu: 4.0 durumu, 4.2 değişimi karşılaştırıyor ve
+    ikincisinin örneklemi yalnız giriş/çıkış olayları.
+    """
+    from . import mutabakat
+
+    if args.donem:
+        return _cmd_mutabakat_degisim(args, mutabakat)
 
     sirketler = evren.oku(args.evren_csv)
     if not sirketler:
@@ -700,6 +775,11 @@ def main(argv=None) -> int:
     sp.set_defaults(fn=cmd_ozet)
 
     sp = alt.add_parser("mutabakat")
+    sp.add_argument("--donem", default=None,
+                    help="revizyon dönemi (ör. 2025-10) — DEĞİŞİM mutabakatı (4.2)")
+    sp.add_argument("--donem-csv", default=str(_mut_donem_csv()))
+    sp.add_argument("--olay-csv", default=str(_mut_olay_csv()))
+    sp.add_argument("--duzeltme-csv", default="veri/panel/duzeltme_olaylari.csv")
     sp.add_argument("--panel-csv", default="veri/panel/snapshot_20260808.csv")
     sp.add_argument("--endeks-csv", default="veri/evren/endeks_uyeligi.csv")
     sp.add_argument("--beyan-csv", default="veri/evren/beyan_durumu.csv")

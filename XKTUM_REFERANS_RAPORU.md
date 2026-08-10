@@ -250,11 +250,20 @@ boşluk bugün küçük diye yarın da küçük kalacak diye bir şey yok.
                              ARENA BORSK KAYSE REEDR
 ```
 
-4.0 `DONEM_UYUMSUZLUGU`'nu kaba bir ölçütle ("01.05.2026'dan sonra
-yayımlandı") saymış ve 7 bulmuştu. Doğru ölçüt duyuru tarihi olunca
-sınıf **büyüyor**. Bu, gerçek uyuşmazlığı azaltma yönünde bir
-düzeltmedir — ama **4.0'ı yeniden koşturmadım**: bu adım hipotez de
-sınıflandırma da revize etmiyor, girdi üretiyor. 4.2'nin işi.
+> **DÜZELTME (4.2, 11 Ağu 2026).** Yukarıdaki 18 ile 4.0'ın
+> `DONEM_UYUMSUZLUGU` sınıfındaki 7 **aynı büyüklük değil** — bu raporun
+> ilk yazımı ikisini "7 → 18" diye eşitledi, yanlıştı.
+>
+> * **18** = iki sınırda, eşlendikleri revizyonun duyurusundan sonra
+>   yayımlanmış **panel kaydı** (14 + 4). Uyuşmazlık şartı yok.
+> * **7** = 4.0'ın bugünkü snapshot'ında hem XKTUM ile **çelişen** hem de
+>   kesim noktasından sonra yayımlanmış **pay kodu**.
+>
+> 4.2 kesim noktasını duyuruya çevirdi ve 4.0 yeniden koştu: sınıf
+> **7'de kaldı**. Sebep ölçüldü — 27.04.2026 ile 01.05.2026 arasındaki
+> 4 günlük boşlukta **hiç panel kaydı yok**, dolayısıyla düzeltmenin bu
+> snapshot'a etkisi sıfır. Düzeltme yine de gerekliydi: etkisi
+> *tarihsel* sınırlarda ortaya çıkıyor (01.10.2025'te 1 kayıt, KUVVA).
 
 Not: futbol kulüpleri (BJKAS, FENER, GSRAY) listede beklenen yerde —
 31 Mayıs kapanışı yüzünden dalganın dışına düşüyorlar (spec §1.2).
@@ -297,9 +306,9 @@ endekste_mi, kaynak_dosya`.
    bulgusunun mutabakat tarafındaki karşılığı.
 2. **`son_revizyon()` veri odaklı hâle getirilmeli** (§2). Takvim
    düzensiz ve kesim noktası duyuru tarihi.
-3. **Kesim ölçütü duyuru tarihi olunca `DONEM_UYUMSUZLUGU` 7 → 18'e
-   çıkıyor** (§5b). Gerçek uyuşmazlık bu yönde ancak azalır; 4.2 yeniden
-   ölçmeli.
+3. **Kesim ölçütü duyuru tarihi olmalı** (§5b). ~~7 → 18~~ — bu eşitleme
+   yanlıştı, yukarıdaki düzeltme kutusuna bakın. 4.2 ölçtü: 4.0'ın sınıfı
+   7'de kalıyor, düzeltmenin etkisi tarihsel sınırlarda.
 
 **Hiçbir hipotez revize edilmedi.** H1–H5 olduğu gibi duruyor; bu adım
 yalnız referans tarafını üretti.

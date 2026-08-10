@@ -19,6 +19,12 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from katilim import mutabakat  # noqa: E402
 from katilim.evren import Sirket  # noqa: E402
 
+KOK = pathlib.Path(__file__).resolve().parents[1]
+_DONEM_CSV = KOK / "veri" / "referans" / "xktum_donemler.csv"
+_OLAY_CSV = KOK / "veri" / "referans" / "xktum_olaylar.csv"
+_PANEL_CSV = KOK / "veri" / "panel" / "panel.csv"
+_DUZELTME_CSV = KOK / "veri" / "panel" / "duzeltme_olaylari.csv"
+
 PANEL_BASLIK = [
     "ticker", "yil", "periyot", "form_donem_etiketi",
     "gelir_orani_kalem", "varlik_orani_kalem", "borc_orani_kalem",
@@ -97,10 +103,59 @@ def _kosla(d, sirketler, panel, endeks, beyan, bugun=date(2026, 8, 8)):
 # --- revizyon takvimi ------------------------------------------------------
 
 
-def test_son_revizyon_takvimi():
-    assert mutabakat.son_revizyon(date(2026, 8, 8)) == date(2026, 5, 1)
-    assert mutabakat.son_revizyon(date(2026, 10, 5)) == date(2026, 10, 1)
-    assert mutabakat.son_revizyon(date(2026, 3, 1)) == date(2025, 10, 1)
+def test_revizyon_aylari_sabiti_geri_gelmemeli():
+    """`REVIZYON_AYLARI = (5, 10)` 4.2'de SİLİNDİ ve geri gelmemeli.
+
+    Takvim düzenli değil (4.1 ölçümü): 01.07.2024 → 01.12.2024 →
+    01.05.2025 → 01.10.2025 → 01.05.2026. Ay sabitinden türetmek
+    tarihsel mutabakatta sahte uyuşmazlık üretir.
+    """
+    assert not hasattr(mutabakat, "REVIZYON_AYLARI"), (
+        "ay sabiti geri gelmiş — takvim CSV'den okunmalı"
+    )
+
+
+def test_son_revizyon_olculen_takvimden_okunuyor():
+    d = mutabakat.revizyon_donemleri(_DONEM_CSV)
+    # Ay sabitinin DOĞRU verdiği iki tarih
+    assert mutabakat.son_revizyon(date(2026, 8, 8), d) == date(2026, 5, 1)
+    assert mutabakat.son_revizyon(date(2026, 3, 1), d) == date(2025, 10, 1)
+    # Ay sabitinin YANLIŞ verdiği iki tarih — 4.2'nin asıl düzelttiği
+    assert mutabakat.son_revizyon(date(2025, 3, 1), d) == date(2024, 12, 1)
+    assert mutabakat.son_revizyon(date(2024, 8, 1), d) == date(2024, 7, 1)
+
+
+def test_kesim_noktasi_duyuru_tarihi_yururluk_degil():
+    """Kesim noktası DUYURU tarihi. Yürürlüğü kullanmak, BIST'e görmediği
+    veriyi görmüş gibi davranmak olurdu."""
+    d = mutabakat.revizyon_donemleri(_DONEM_CSV)
+    kesim = mutabakat.kesim_noktasi(date(2026, 8, 8), d)
+    assert kesim == date(2026, 4, 27)
+    assert kesim < mutabakat.son_revizyon(date(2026, 8, 8), d)
+
+
+def test_duyurusuz_donem_yururluge_dusmuyor():
+    """Kural 7: duyuru tarihi yoksa sessizce yürürlük tarihi kullanılmaz."""
+    with tempfile.TemporaryDirectory() as d:
+        y = pathlib.Path(d) / "donem.csv"
+        y.write_text(
+            "donem_baslangic,donem_bitis,duyuru_tarihi,uye_sayisi,"
+            "giren_sayisi,cikan_sayisi,kaynak_dosya\n"
+            "2026-05-01,2026-09-30,,243,27,19,x.pdf\n", encoding="utf-8")
+        try:
+            mutabakat.revizyon_donemleri(y)
+        except mutabakat.MutabakatGirdisiYok:
+            return
+        raise AssertionError("duyurusuz dönem hata fırlatmadı")
+
+
+def test_takvim_disi_tarih_sessizce_kabul_edilmiyor():
+    d = mutabakat.revizyon_donemleri(_DONEM_CSV)
+    try:
+        mutabakat.son_revizyon(date(2020, 1, 1), d)
+    except mutabakat.MutabakatGirdisiYok:
+        return
+    raise AssertionError("takvimden önceki tarih hata fırlatmadı")
 
 
 # --- dört sınıf ------------------------------------------------------------
