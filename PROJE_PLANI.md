@@ -12,8 +12,9 @@ Bu belge, her fazın Claude Code'a verilecek promptlarını içerir. Kaynaklar:
 (ayrıştırma hatası 0, 22 sapmanın 22'si teşhisli) · **1.4b snapshot ✔**
 (1.280 panel satırı, H5 iki karar sütunuyla taşınıyor).
 **1.1b özet sayfaları ✔** (746/746) · **4.0 ön mutabakat ✔**
-(gerçek uyuşmazlık 2/518 = %0,39; 11 açık ismin 11'i çözüldü).
-151 test geçiyor. Sıradaki: **2.0b** veya **2.2** — ikisi de aciliyetsiz.
+(gerçek uyuşmazlık 2/518 = %0,39) · **3.1 tolerans zinciri ✔**
+(sıralama hatası düzeldi; zincir 5 satır çevirdi, mutabakat 2 → 2).
+162 test geçiyor. Sıradaki: **3.2**, **2.2** veya **2.0b** — aciliyetsiz.
 
 **1.1b ertelendi ve 1.3'ün kapısı yer değiştirdi (7 Ağu).** Şirket özet
 sayfaları kaymıyor, ne zaman çekilse aynı veriyi veriyor; KAFİF formları
@@ -845,6 +846,22 @@ oranı <%5 veya her karantina kaydı gerekçeli. Panelin fiili derinliği
 ```
 Görev: Aynı (ticker, yıl, periyot) için birden fazla bildirim durumunu çöz.
 
+⚠ **BU ADIM 3.1'İN ÖN KOŞULUYDU VE SIRA TERS İŞLETİLDİ (10 Ağu).**
+3.1 koştu, panel üretildi, ama tolerans zinciri bildirim bazında
+yürüyor ve aynı dönemin düzeltmesini "önceki dönem" sanıyor. Panelde
+bu kalıptan 15 satır var; zincirin çevirdiği 5 satırın 4'ü artefakt
+(ALVES, DCTTR, DOGUB, KONTR), yalnız KLMSN gerçek. Bu adım bitince
+`panel` YENİDEN ÜRETİLECEK ve 4.0 mutabakatı yeniden koşulacak.
+
+ZİNCİR DÖNEM BAZINDA YÜRÜR. `seri_degerlendir` bildirim listesi değil,
+DÖNEM listesi üzerinde adımlamalı. Look-ahead korunarak: P(n)
+değerlendirilirken "önceki dönem durumu", P(n−1)'in P(n)'in gönderim
+anında geçerli olan kaydından gelir — P(n−1)'in bugünkü nihai
+kaydından değil. Panel satırı her bildirim için ayrı kalır (o kayıt
+kendi penceresinde canlı etiketti) ama zinciri ilerletmez.
+Test: PNLSN (aynı dönem 3 bildirim) ve DCTTR (düzeltme elemeyi
+tetikliyordu) regresyon vakası olarak sabitlensin.
+
 Spec §3.2: en geç gonderim_ts kazanır, ama eskisi SİLİNMEZ — düzeltme
 olayının kendisi bir sinyaldir.
 
@@ -883,7 +900,28 @@ düzeltme olayları ayrı tabloda; karar çeviren düzeltmeler sayılmış.
 
 **Spec çıkış kriteri:** Her (ticker, dönem) için karar + gerekçe kodu.
 
-## 3.1 — Tolerans durum makinesini panele bağla
+## 3.1 — Tolerans durum makinesini panele bağla ✔ **BİTTİ (10 Ağu 2026)**
+
+Çıktı: `veri/panel/panel.csv` (1.280 satır, spec §1.5 şeması) ·
+`katilim/panel.py::panel_uret` · **0 istek**.
+
+| Bulgu | Etkisi |
+|---|---|
+| `karar.py` sıralama hatası **düzeltildi** | Artık yalnız `gonderim_ts`; zaman damgasız kayıt sona |
+| Zincir **5 satır** çevirdi (TOLERANSTA → UYGUN_DEGIL) | ALVES, DCTTR, DOGUB, KLMSN, KONTR |
+| Mutabakata net etki **sıfır** | KLMSN çözüldü, DCTTR bozuldu → **H4 desteklenmedi**, revize edilmedi |
+| Panel `karar`ı ÖZET alanından | `seri_degerlendir(oranlar_fn=…)`; snapshot ile tutarlı (H5) |
+| ZİNCİR BOŞLUĞU 0 satır | Doğru sıfır: ölçülen en uzun aralık 259 gün, eşik 280 |
+
+**AÇIK KARAR:** zincir boşluğunda tolerans durumu ne olacak? Spec tanımsız.
+Geçici davranış: durum **taşınır**, satır `ZINCIR_BOSLUGU` ile işaretlenir.
+
+*3.1 promptu arşiv olarak duruyor.*
+
+<details>
+<summary>3.1 promptu (arşiv)</summary>
+
+### (özgün) Tolerans durum makinesini panele bağla
 
 ```
 Görev: seri_degerlendir()'i tarihsel panele uygula.
@@ -929,9 +967,13 @@ temiz -> toleransta -> temiz -> toleransta. Ve: toleransta -> farklı
 kriterde aşım -> UYGUN_DEGIL olduğunu doğrula (H4'ün kod içindeki hali).
 ```
 
-**Çıkış kriteri:** `panel.csv` her (ticker, dönem) için karar içeriyor;
-tolerans zinciri testlerle doğrulanmış; zincir boşluğu politikası
-belgelenmiş.
+**Çıkış kriteri:** ✔ karşılandı — `panel.csv` 1.280 satır (539 pay kodu);
+zincir 9 testle doğrulandı (4 dönemlik zincir, H4'ün farklı kriterde
+elemesi, BELİRSİZ'in sıfırlamaması, kronoloji, boşluk işaretleme);
+zincir boşluğu politikası geçici olarak belgelendi ve karar kullanıcıya
+bırakıldı.
+
+</details>
 
 ---
 

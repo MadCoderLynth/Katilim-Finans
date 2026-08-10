@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
+from datetime import datetime
 from decimal import Decimal
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
@@ -163,8 +164,10 @@ def test_tolerans_sirket_bazinda_kriter_bazinda_degil():
     """H4: gelirden toleransa düşüp sonraki dönem borçta aşan şirket elenir."""
     d1 = _oranli(gelir=Decimal("5.2"))
     d1.yil, d1.periyot = 2025, "6 Aylık"
+    d1.gonderim_ts = datetime(2025, 8, 13, 18, 0, 0)
     d2 = _oranli(borc=Decimal("34"))
     d2.yil, d2.periyot = 2025, "Yıllık"
+    d2.gonderim_ts = datetime(2026, 3, 11, 18, 0, 0)
     sonuc = seri_degerlendir([d2, d1])  # sıralamayı motor yapmalı
     assert [s.karar for _, s in sonuc] == [Karar.TOLERANSTA, Karar.UYGUN_DEGIL]
 
@@ -172,12 +175,56 @@ def test_tolerans_sirket_bazinda_kriter_bazinda_degil():
 def test_temize_donunce_tolerans_kalkiyor():
     d1 = _oranli(gelir=Decimal("5.2"))
     d1.yil, d1.periyot = 2025, "6 Aylık"
+    d1.gonderim_ts = datetime(2025, 8, 13, 18, 0, 0)
     d2 = _oranli(gelir=Decimal("4.0"))
     d2.yil, d2.periyot = 2025, "Yıllık"
+    d2.gonderim_ts = datetime(2026, 3, 11, 18, 0, 0)
     d3 = _oranli(gelir=Decimal("5.2"))
     d3.yil, d3.periyot = 2026, "6 Aylık"
+    d3.gonderim_ts = datetime(2026, 8, 5, 18, 0, 0)
     kararlar = [s.karar for _, s in seri_degerlendir([d1, d2, d3])]
     assert kararlar == [Karar.TOLERANSTA, Karar.UYGUN, Karar.TOLERANSTA]
+
+
+def test_siralama_yalniz_gonderim_ts_ile():
+    """3/6/9 Aylık ve Yıllık karışık seri: kronoloji dönem etiketinden GELMEZ.
+
+    Eski anahtar `(yil, 0 if periyot=="6 Aylık" else 1, ts)` idi; 3 Aylık,
+    9 Aylık ve Yıllık aynı kovaya düşüyor ve mayısta verilen bir 3 Aylık,
+    ağustosta verilen 6 Aylık'tan sonra sıralanıyordu.
+    """
+    kayitlar = []
+    # (yil, periyot, gonderim_ts) — dönem etiketi ile zaman KASITEN ters
+    plan = [
+        (2024, "Yıllık", datetime(2025, 8, 11, 23, 45)),   # futbol kulübü
+        (2025, "3 Aylık", datetime(2025, 8, 19, 18, 12)),
+        (2025, "6 Aylık", datetime(2025, 9, 2, 18, 0)),
+        (2025, "9 Aylık", datetime(2025, 11, 10, 20, 12)),
+        (2025, "Yıllık", datetime(2026, 3, 4, 18, 57)),
+        (2026, "3 Aylık", datetime(2026, 5, 6, 19, 6)),
+    ]
+    for yil, per, ts in plan:
+        b = _oranli()
+        b.yil, b.periyot, b.gonderim_ts = yil, per, ts
+        kayitlar.append(b)
+
+    import random
+    karisik = list(kayitlar)
+    random.Random(20260810).shuffle(karisik)
+    sirali = [b.gonderim_ts for b, _ in seri_degerlendir(karisik)]
+    assert sirali == sorted(sirali), sirali
+    assert sirali == [ts for _, _, ts in plan]
+
+
+def test_zaman_damgasiz_kayit_sona_gidiyor():
+    """Bilinmeyen tarih geçmişe yerleştirilirse sonraki dönemlerin tolerans
+    durumunu sessizce değiştirir; bu yüzden en SONA konuyor."""
+    b1 = _oranli()
+    b1.gonderim_ts = datetime(2025, 8, 13, 18, 0)
+    b2 = _oranli()
+    b2.gonderim_ts = None
+    sirali = [b.gonderim_ts for b, _ in seri_degerlendir([b2, b1])]
+    assert sirali == [datetime(2025, 8, 13, 18, 0), None]
 
 
 def test_mali_sektor_kapsam_disi():

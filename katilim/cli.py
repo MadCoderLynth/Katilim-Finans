@@ -426,6 +426,16 @@ def cmd_panel(args) -> int:
     yol = panel.yaz(satirlar, args.csv)
     o = panel.ozet(satirlar, rapor)
 
+    # Faz 3.1 — tolerans zincirli tarihsel panel (spec §1.5 şeması).
+    beyanlar = {}
+    beyan_yolu = pathlib.Path(args.beyan_csv)
+    if beyan_yolu.exists():
+        with open(beyan_yolu, newline="", encoding="utf-8-sig") as f:
+            beyanlar = {r["ticker"]: r["durum"] for r in csv.DictReader(f)}
+    kararlar = panel.panel_uret(kayitlar, sirketler, beyan_durumlari=beyanlar)
+    karar_yolu = panel.panel_yaz(kararlar, args.karar_csv)
+    ko = panel.panel_ozet(kararlar, snapshot=satirlar)
+
     print(f"\nSNAPSHOT -> {yol}")
     print(f"  panel satırı      : {o['panel_satiri']} "
           f"({o['benzersiz_bildirim']} bildirim, {o['benzersiz_ticker']} pay kodu)")
@@ -441,6 +451,15 @@ def cmd_panel(args) -> int:
     print(f"  şablon imzası     : {o['sablon_imzasi']}")
     print(f"  form etiketi ayrışan: {o['form_etiketi_ayrisan']}")
     print(f"  gönderim aralığı  : {o['en_eski']} .. {o['en_yeni']}")
+
+    print(f"\nTOLERANS ZİNCİRLİ PANEL -> {karar_yolu}")
+    print(f"  satır             : {ko['satir']} ({ko['ticker']} pay kodu)")
+    print(f"  karar dağılımı    : {ko['karar_dagilimi']}")
+    print(f"  önceki dönem tol. : {ko['onceki_donem_tolerans']}")
+    print(f"  ZİNCİR BOŞLUĞU    : {ko['zincir_boslugu']} satır")
+    print(f"  zincirin çevirdiği: {ko['zincirin_cevirdigi']} satır")
+    for t, yil, per, eski, yeni in ko["cevrilen_liste"]:
+        print(f"      * {t:7s} {yil}/{per:9s} {eski} -> {yeni}")
 
     if rapor.hatali:
         print(f"\nAYRIŞTIRMA HATASI ({len(rapor.hatali)}):", file=sys.stderr)
@@ -642,6 +661,9 @@ def main(argv=None) -> int:
     sp.add_argument("--evren-csv", default=str(evren.EVREN_CSV))
     sp.add_argument("--csv", default=None,
                     help="çıktı yolu (varsayılan: veri/panel/snapshot_{bugün}.csv)")
+    sp.add_argument("--karar-csv", default="veri/panel/panel.csv",
+                    help="tolerans zincirli panel (Faz 3.1)")
+    sp.add_argument("--beyan-csv", default="veri/evren/beyan_durumu.csv")
     sp.set_defaults(fn=cmd_panel)
 
     sp = alt.add_parser("ozet")

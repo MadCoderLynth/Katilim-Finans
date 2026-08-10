@@ -352,6 +352,205 @@ def yaz(satirlar: list[PanelSatiri], yol: Path | str | None = None) -> Path:
 # --- Rapor -----------------------------------------------------------------
 
 
+# --- Tarihsel panel: tolerans zinciri (Faz 3.1) ----------------------------
+#
+# Snapshot (`snapshot_uret`) her kaydı kendi başına değerlendiriyordu.
+# Burada `karar.seri_degerlendir` devreye giriyor ve tolerans durumu
+# şirket bazında dönemler arasında TAŞINIYOR (H4).
+
+ZINCIR_TEMIZ = ""
+ZINCIR_BOSLUGU = "ZINCIR_BOSLUGU"
+
+# Bir dönemin ATLANDIĞINI gösteren asgari sessizlik. KAFİF yarıyıllık:
+# ardışık bildirimler arası ölçülen medyan 185 gün, p90 206, en uzun 259
+# (1.276 formluk arşiv). 280 gün ≈ 1,5 kadans — bunu aşan aralık, arada
+# bir dönemin hiç verilmediği anlamına gelir.
+#
+# Boşluğu `beyan_durumu` ile aramak YANLIŞ olurdu: panelde satırı olan her
+# şirket zaten BEYAN_VAR'dır, yani o sinyal hiç tetiklenmez ve "boşluk yok"
+# diye yanıltır. Boşluk şirketin KENDİ serisindeki sessizliktir.
+ZINCIR_BOSLUK_GUN = 280
+
+
+@dataclass
+class KararSatiri:
+    """Spec §1.5 `uygunluk_karar` şeması + zincir izi."""
+
+    ticker: str
+    yil: int | None
+    periyot: str | None
+    gecerlilik_baslangic: datetime | None     # = gonderim_ts (spec §5.1)
+    karar: str
+    red_kodlari: list[str]
+    gelir_orani: Decimal | None
+    varlik_orani: Decimal | None
+    borc_orani: Decimal | None
+    onceki_donem_tolerans: bool
+    sablon_versiyon: str | None
+    self_check: str
+    bildirim_id: int
+    zincir_notu: str = ZINCIR_TEMIZ
+
+
+def panel_uret(
+    kayitlar: list[ArsivKayit],
+    evren_sirketler,
+    *,
+    beyan_durumlari: dict[str, str] | None = None,
+) -> list[KararSatiri]:
+    """Her (ticker, yıl, periyot) için tolerans zincirli uygunluk kararı.
+
+    Sıra **şirket bazında kronolojik** ve kronoloji `gonderim_ts`'ten
+    geliyor — dönem etiketinden değil (`karar.seri_degerlendir`).
+
+    `BELIRSIZ` kararı tolerans durumunu SIFIRLAMAZ: veri eksikliği bir
+    "temize çıkma" değildir (karar.py'nin mevcut davranışı, panelde de
+    korunuyor).
+
+    **Zincir boşluğu — spec'te TANIMLI DEĞİL.** Bir şirketin dönemleri
+    arasında beyan vermediği bir aralık varsa tolerans durumunun taşınıp
+    taşınmayacağı yazılı değil. Geçici davranış: **durum taşınır** ve satır
+    `ZINCIR_BOSLUGU` ile işaretlenir ki karar verildiğinde etkilenen
+    satırlar tek sorguyla bulunabilsin. Karar kullanıcıya bırakıldı.
+    """
+    from .karar import seri_degerlendir
+
+    muafiyet = {s.ticker: s.mali_sektor_muaf for s in evren_sirketler}
+    beyan_durumlari = beyan_durumlari or {}
+
+    # Panel ekseni ticker: çoklu kodlu bildirim her kod için ayrı zincire girer.
+    per_ticker: dict[str, list[ArsivKayit]] = {}
+    for k in kayitlar:
+        for t in k.tickerlar or ["BILINMIYOR"]:
+            per_ticker.setdefault(t, []).append(k)
+
+    satirlar: list[KararSatiri] = []
+    for ticker, kayit_listesi in sorted(per_ticker.items()):
+        # bildirim -> arşiv kaydı eşlemesi (meta veri anahtarları için)
+        meta = {id(k.bildirim): k for k in kayit_listesi}
+        # Oranlar ÖZET alanından — snapshot'ın `karar` sütunuyla AYNI kaynak
+        # (H5 varsayılanı). Kalemlerden hesaplasaydık tarihsel panel ile
+        # snapshot, tolerans zinciriyle ilgisi olmayan sebeplerle ayrışırdı.
+        sonuclar = seri_degerlendir(
+            [k.bildirim for k in kayit_listesi],
+            mali_sektor_muaf=muafiyet.get(ticker) is True,
+            oranlar_fn=lambda b: Oranlar(
+                b.ozet_gelir_orani, b.ozet_varlik_orani, b.ozet_borc_orani
+            ),
+        )
+
+        # Zincir boşluğu: şirketin KENDİ serisinde bir dönem atlanmış mı?
+        # Kronolojik ardışık iki bildirim arasındaki sessizlik ölçülüyor;
+        # boşluğun SONRASINDAKİ satır işaretleniyor, çünkü tolerans durumu
+        # ona taşınıyor.
+        onceki_ts: datetime | None = None
+        bosluklu_idler: set[int] = set()
+        for b, _ in sonuclar:
+            ts = meta[id(b)].gonderim_ts
+            if onceki_ts and ts and (ts - onceki_ts).days > ZINCIR_BOSLUK_GUN:
+                bosluklu_idler.add(meta[id(b)].bildirim_id)
+            if ts:
+                onceki_ts = ts
+
+        for b, s in sonuclar:
+            k = meta[id(b)]
+            kontrol = self_check(b)
+            o = s.oranlar
+            satirlar.append(
+                KararSatiri(
+                    ticker=ticker,
+                    # Dönem anahtarı META VERİDEN (1.3'ün bulgusu).
+                    yil=k.yil,
+                    periyot=k.periyot,
+                    gecerlilik_baslangic=k.gonderim_ts,
+                    karar=s.karar.value,
+                    red_kodlari=list(s.kodlar),
+                    gelir_orani=o.gelir if o else None,
+                    varlik_orani=o.varlik if o else None,
+                    borc_orani=o.borc if o else None,
+                    onceki_donem_tolerans=s.onceki_donem_toleransta,
+                    sablon_versiyon=b.sablon_imzasi,
+                    self_check="GECTI" if kontrol.gecti else "KALDI",
+                    bildirim_id=k.bildirim_id,
+                    zincir_notu=(
+                        ZINCIR_BOSLUGU
+                        if k.bildirim_id in bosluklu_idler else ZINCIR_TEMIZ
+                    ),
+                )
+            )
+    return satirlar
+
+
+KARAR_BASLIKLARI = [
+    "ticker", "yil", "periyot", "gecerlilik_baslangic", "karar", "red_kodlari",
+    "gelir_orani", "varlik_orani", "borc_orani", "onceki_donem_tolerans",
+    "sablon_versiyon", "self_check", "bildirim_id", "zincir_notu",
+]
+
+
+def panel_yaz(satirlar: list[KararSatiri], yol: Path | str = PANEL_DIZINI / "panel.csv") -> Path:
+    yol = Path(yol)
+    yol.parent.mkdir(parents=True, exist_ok=True)
+    sirali = sorted(
+        satirlar,
+        key=lambda s: (s.ticker, s.gecerlilik_baslangic or datetime.min),
+    )
+    with open(yol, "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.DictWriter(f, fieldnames=KARAR_BASLIKLARI)
+        w.writeheader()
+        for s in sirali:
+            w.writerow(
+                {
+                    "ticker": s.ticker,
+                    "yil": s.yil if s.yil is not None else "",
+                    "periyot": s.periyot or "",
+                    "gecerlilik_baslangic": (
+                        s.gecerlilik_baslangic.strftime("%Y-%m-%d %H:%M:%S")
+                        if s.gecerlilik_baslangic else ""
+                    ),
+                    "karar": s.karar,
+                    "red_kodlari": ",".join(s.red_kodlari),
+                    "gelir_orani": "" if s.gelir_orani is None else str(s.gelir_orani),
+                    "varlik_orani": "" if s.varlik_orani is None else str(s.varlik_orani),
+                    "borc_orani": "" if s.borc_orani is None else str(s.borc_orani),
+                    "onceki_donem_tolerans": _EH[s.onceki_donem_tolerans],
+                    "sablon_versiyon": s.sablon_versiyon or "",
+                    "self_check": s.self_check,
+                    "bildirim_id": s.bildirim_id,
+                    "zincir_notu": s.zincir_notu,
+                }
+            )
+    return yol
+
+
+def panel_ozet(satirlar: list[KararSatiri], snapshot: list[PanelSatiri] | None = None) -> dict:
+    """Zincirin ne değiştirdiğini gösterir — asıl merak edilen bu."""
+    dagilim: dict[str, int] = {}
+    for s in satirlar:
+        dagilim[s.karar] = dagilim.get(s.karar, 0) + 1
+
+    cikti = {
+        "satir": len(satirlar),
+        "ticker": len({s.ticker for s in satirlar}),
+        "karar_dagilimi": dict(sorted(dagilim.items(), key=lambda kv: -kv[1])),
+        "onceki_donem_tolerans": sum(1 for s in satirlar if s.onceki_donem_tolerans),
+        "zincir_boslugu": sum(1 for s in satirlar if s.zincir_notu == ZINCIR_BOSLUGU),
+        "karantina": sum(1 for s in satirlar if s.self_check == "KALDI"),
+    }
+    if snapshot is not None:
+        # Zincirsiz snapshot ile karşılaştır: hangi satırlar çevrildi?
+        snap = {(s.ticker, s.bildirim_id): s.karar for s in snapshot}
+        cevrilen = [
+            (s.ticker, s.yil, s.periyot, snap[(s.ticker, s.bildirim_id)], s.karar)
+            for s in satirlar
+            if (s.ticker, s.bildirim_id) in snap
+            and snap[(s.ticker, s.bildirim_id)] != s.karar
+        ]
+        cikti["zincirin_cevirdigi"] = len(cevrilen)
+        cikti["cevrilen_liste"] = cevrilen
+    return cikti
+
+
 def ozet(satirlar: list[PanelSatiri], rapor: AyristirmaRaporu) -> dict:
     def say(anahtar):
         d: dict = {}

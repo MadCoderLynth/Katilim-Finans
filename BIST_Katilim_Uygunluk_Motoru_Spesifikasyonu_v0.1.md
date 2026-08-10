@@ -203,7 +203,11 @@ Aşağıdakiler kural olarak kodlanacak ama **doğrulanmamış** kabul edilecek,
 - **H1:** 4A'daki herhangi bir EVET kesin elemedir (THY vakası destekliyor, n=1).
 - **H2:** Kâr payı imtiyazı, tasfiye payı imtiyazı ile aynı ağırlıkta eleme sebebidir.
 - **H3:** BIST payda olarak gerçekten max(PD, TV) kullanıyor.
-- **H4:** Tolerans durumu şirket bazında, kriter bazında değil. → **4.0 ölçtü, onaylanmadı:** tolerans zinciri uygulansa KLMSN'in uyuşmazlığı kapanıyor ama DCTTR'de yenisi açılıyor. Bu veriyle ayırt edilemiyor (n=2).
+- **H4:** Tolerans durumu şirket bazında, kriter bazında değil. → **4.0'ın "DCTTR'de yeni uyuşmazlık açılıyor" bulgusu GEÇERSİZ (3.1 sonrası inceleme, 10 Ağu).** DCTTR'nin elenmesi zincirden değil, düzeltmelerin çözülmemiş olmasından kaynaklanıyordu: zincir bildirim bazında yürüyor ve *aynı dönemin* önceki düzeltmesini "önceki dönem" sanıyor. Zincirin çevirdiği 5 satırın 4'ü (ALVES, DCTTR, DOGUB, KONTR) bu artefakt; yalnız KLMSN gerçek bir dönemler arası etki. H4 hâlâ onaylanmış değil (n=1) ama karşı kanıtı kalmadı.
+
+> **ZİNCİR DÖNEM BAZINDA YÜRÜR, BİLDİRİM BAZINDA DEĞİL.** Md. 3.5 ardışık *değerleme dönemlerini* düzenliyor; aynı dönemin düzeltilmiş bir bildirimi yeni bir dönem değildir. Panelde bu kalıptan 15 satır var (`onceki_donem_tolerans=EVET` iken "önceki" aynı dönemin eski kaydı).
+>
+> Doğru semantik, look-ahead korunarak: P(n) değerlendirilirken "önceki dönem durumu", P(n−1)'in **P(n)'in gönderim anında geçerli olan** kaydından gelir. Panel satırı her bildirim için ayrı kalır (o kayıt kendi penceresinde canlı etiketti) ama **zinciri ilerletmez.** Bu yüzden 2.3 (düzeltme çözümü) 3.1'in ön koşuludur; sıra ters işletildi, panel 2.3 sonrası yeniden üretilecek.
 - **H6 (aday, KODLANMADI):** Endeksten çıkan şirketin geri girişi gecikmeli — bir dönem temiz olmak yetmiyor. → PEKGY: 6 aylık formda borç %36,73 (bant üstü), yıllıkta %20,88 (temiz), ama 01.05.2026 revizyonunda geri girmemiş. Alternatif açıklama H3 (payda). Standart md. 3.5 tolerans için asimetrik bir bekleme tanımlıyor; girişte de simetrik bir hüküm olup olmadığı **TKBB metninden doğrulanmalı** — kodlamadan önce kaynağa bakılacak.
 - **H5:** BIST, formun **özet alanındaki** oranı kullanıyor; alt kalemlerden yeniden hesaplanan oranı değil. (Faz 1.3 ölçümü: 1.276 formun 19'unda formun kendi 4E TOPLAM satırı kendi kalemleriyle tutmuyor, ikisi farklı oran üretiyor. Standart beyan esaslı işlediği için BIST'in beyan edilen özeti kullanması muhtemel — ama doğrulanmadı.)
 

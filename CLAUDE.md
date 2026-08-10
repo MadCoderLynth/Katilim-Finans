@@ -68,14 +68,16 @@ Test kırıldığında **kuralı değil kodu düzeltin.**
    Bu, kural 2'nin (eksik beyan ≠ hayır beyanı) toplama katmanındaki karşılığı:
    her ikisinde de eksik veri, temiz veri gibi görünerek geçiyor.
 
-## Bilinen hata — düzeltilmedi
+## Bilinen hata — DÜZELTİLDİ (3.1, 10 Ağu 2026)
 
-**`karar.py:187` sıralama anahtarı bozuk.** `(yil, 0 if periyot ==
-"6 Aylık" else 1, gonderim_ts)` — 1.2 ölçtü ki `3 Aylık` ve `9 Aylık` da
-var, üçü aynı kovaya düşüyor. Tolerans durum makinesi bu sırayı yürüdüğü
-için yanlış sıra doğrudan yanlış karar üretir. Düzeltme: yalnız
-`gonderim_ts` ile sırala (dönem etiketi kronoloji taşımıyor — futbol
-kulüpleri "2024/Yıllık"ı Ağustos 2025'te veriyor). Plan adımı 3.1.
+~~`karar.py:187` sıralama anahtarı bozuk.~~ `seri_degerlendir` artık
+**yalnız `gonderim_ts` ile** sıralıyor. Dönem etiketi kronoloji taşımıyor:
+`3 Aylık`/`9 Aylık`/`Yıllık` eski anahtarda aynı kovaya düşüyordu ve
+futbol kulüpleri "2024/Yıllık"ı Ağustos 2025'te veriyor. Zaman damgası
+olmayan kayıt **en sona** konuyor — bilinmeyen tarihi geçmişe koymak
+sonraki dönemlerin tolerans durumunu sessizce değiştirirdi.
+Testler: `test_siralama_yalniz_gonderim_ts_ile`,
+`test_zaman_damgasiz_kayit_sona_gidiyor`.
 
 ## Doğrulanmamış varsayımlar
 
@@ -119,13 +121,39 @@ onunla çelişirse plan değil bu dosya esastır.
 
 Biten: **Faz 0** · **1.0** rota keşfi · **1.1** evren · **2.0** derinlik
 keşfi · **1.2** bildirim sorguları · **1.4a** form arşivi · **1.3** parser
-kapısı · **1.4b** snapshot paneli · **1.1b** özet sayfaları · **4.0** ön mutabakat.
-Testler: 151 geçiyor (22 motor + 9 çekici + 24 evren + 8 derinlik +
-15 bildirim + 7 rsc + 13 toplayıcı + 9 pilot + 12 panel + 20 özet +
+kapısı · **1.4b** snapshot paneli · **1.1b** özet sayfaları · **4.0** ön
+mutabakat · **3.1** tolerans zinciri.
+Testler: 162 geçiyor (24 motor + 9 çekici + 24 evren + 8 derinlik +
+15 bildirim + 7 rsc + 13 toplayıcı + 9 pilot + 21 panel + 20 özet +
 12 mutabakat).
 
-Sıradaki: **2.0b** (arka uç servisi sondası, bütçe 10) veya **2.2**
-(şablon versiyonlama, ağ isteği yok) — ikisi de aciliyetsiz.
+Sıradaki: **3.2** (belirsiz bant / PD paydası — PD kaynağı sorusu açık),
+**2.2** (şablon versiyonlama) veya **2.0b**. Hiçbiri aciliyetli değil.
+
+**Faz 3.1 bitti — tolerans zinciri panele bağlandı.** Ayrıntı:
+`katilim/panel.py::panel_uret`, çıktı `veri/panel/panel.csv` (1.280 satır).
+
+- **Sıralama hatası düzeltildi** (yukarıdaki bölüm). 
+- **Zincir 5 satır çevirdi** (TOLERANSTA → UYGUN_DEGIL): ALVES, DCTTR,
+  DOGUB, KLMSN, KONTR. Karar dağılımı 660 UYGUN_DEGIL / 582 UYGUN /
+  38 TOLERANSTA (snapshot: 655 / 582 / 43).
+- **Mutabakata etkisi SIFIR — ve bu bir H4 bulgusu.** 4.0'ın öngördüğü
+  aynen gerçekleşti: KLMSN'in uyuşmazlığı kapandı ama DCTTR'de yenisi
+  açıldı (XKTUM üyesi olduğu hâlde eliyoruz). Gerçek uyuşmazlık 2 → 2.
+  **H4 revize EDİLMEDİ**; zincir spec §2.1'e sadık kodlandı, ama
+  nokta-zaman kanıtı onu desteklemiyor. Karar 4.3'ün.
+- **Panel `karar`ı ÖZET alanından** (H5 varsayılanı). İlk yazımda
+  `seri_degerlendir` oranları kalemlerden hesaplıyordu ve tarihsel panel
+  ile snapshot, zincirle ilgisi olmayan bir sebeple ayrışıyordu;
+  `oranlar_fn` parametresiyle düzeltildi.
+- **ZİNCİR BOŞLUĞU: 0 satır** ve bu doğru bir sıfır. Boşluk ölçütü
+  şirketin kendi serisindeki sessizlik (>280 gün ≈ 1,5 kadans); ölçülen
+  ardışık aralık medyanı 185 gün, en uzunu 259. **1 yıllık pencere zaten
+  bir boşluğu barındıramıyor.**
+
+**AÇIK KARAR — zincir boşluğunda tolerans durumu.** Spec tanımlamıyor.
+Geçici davranış: **durum taşınır**, satır `ZINCIR_BOSLUGU` ile işaretlenir.
+Bu pencerede hiç tetiklenmiyor ama panel derinleştikçe tetiklenecek.
 
 **Faz 4.0 bitti — ön mutabakat koştu.** Ayrıntı: @ON_MUTABAKAT_20260810.md
 (`katilim/mutabakat.py`, `python3 -m katilim.cli mutabakat`, 11 istek).
@@ -266,7 +294,7 @@ hata yok. 239 MB, `veri/ham/{TICKER}_{YIL}_{PERIYOT}_{bildirim_id}.html`.
    kaçırılan bildirim düzelmez.
 
 Zaman duyarlı olmayan her şey arşivin arkasına alındı:
-**1.2 ✔ → 1.4a ✔ → 1.3 ✔ → 1.4b ✔ → 1.1b ✔ → 4.0 ✔ → 2.0b → 2.2.**
+**1.2 ✔ → 1.4a ✔ → 1.3 ✔ → 1.4b ✔ → 1.1b ✔ → 4.0 ✔ → 3.1 ✔ → 2.2 → 3.2.**
 
 **Faz 1.2 bitti — ve zaman duyarlılığının yerini değiştirdi.**
 @BILDIRIM_GECMISI_RAPORU.md (651 istek / onaylı 800).

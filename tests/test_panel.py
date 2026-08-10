@@ -20,6 +20,7 @@ from decimal import Decimal
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from katilim import panel  # noqa: E402
+from katilim.evren import Sirket  # noqa: E402
 from katilim.model import Kalem, KafifBildirim  # noqa: E402
 
 BEYANLAR_TEMIZ = {
@@ -212,6 +213,160 @@ def test_indekste_olup_diskte_olmayan_dosya_raporlaniyor():
                         "INDIRILDI", "yok.html", 100, "", "HAYIR", ""])
         kayitlar, rapor = panel.ayristir_arsiv(dizin, indeks_csv=ix)
     assert kayitlar == [] and rapor.dosyasi_yok == [1]
+
+
+# ===== Faz 3.1 — tolerans zincirli tarihsel panel ==========================
+
+
+def _zincir_kayit(bid, *, gelir_ozet=0, varlik_ozet=0, borc_ozet=0, ts=None,
+                  ticker="TEST", yil=2025, periyot="6 Aylık", beyanlar=None):
+    """Oranları ÖZET alanından gelen kayıt.
+
+    Panel `karar` sütununu ÖZET'ten üretiyor (H5 varsayılanı), bu yüzden
+    zincir testleri de özet alanını sürüyor.
+    """
+    b = _bildirim(ozet=(gelir_ozet, varlik_ozet, borc_ozet), beyanlar=beyanlar)
+    b.bildirim_id = bid
+    b.gonderim_ts = ts
+    return panel.ArsivKayit(
+        bildirim=b, bildirim_id=bid, tickerlar=[ticker], yil=yil,
+        periyot=periyot, gonderim_ts=ts, dosya=f"{ticker}_{bid}.html",
+    )
+
+
+def test_dort_donemlik_zincir_temiz_tolerans_temiz_tolerans():
+    """temiz -> toleransta -> temiz -> toleransta.
+
+    Kritik nokta üçüncü dönem: temize dönmek tolerans durumunu SIFIRLAR,
+    yani dördüncü dönemdeki aşım yeniden TOLERANSTA olur, eleme olmaz.
+    """
+    kayitlar = [
+        _zincir_kayit(1, gelir_ozet=Decimal("1.0"), ts=datetime(2025, 8, 13)),
+        _zincir_kayit(2, gelir_ozet=Decimal("5.2"), ts=datetime(2026, 3, 11)),
+        _zincir_kayit(3, gelir_ozet=Decimal("2.0"), ts=datetime(2026, 8, 5)),
+        _zincir_kayit(4, gelir_ozet=Decimal("5.3"), ts=datetime(2027, 3, 9)),
+    ]
+    satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("TEST")])
+    assert [s.karar for s in satirlar] == [
+        "UYGUN", "TOLERANSTA", "UYGUN", "TOLERANSTA",
+    ], [s.karar for s in satirlar]
+    assert [s.onceki_donem_tolerans for s in satirlar] == [
+        False, False, True, False,
+    ]
+
+
+def test_toleranstan_sonra_farkli_kriterde_asim_eler():
+    """H4: tolerans ŞİRKET bazında taşınır, kriter bazında değil.
+
+    Gelirden toleransa düşen şirket, sonraki dönem BORÇTA aşarsa elenir.
+    """
+    kayitlar = [
+        _zincir_kayit(1, gelir_ozet=Decimal("5.2"), ts=datetime(2025, 8, 13)),
+        _zincir_kayit(2, borc_ozet=Decimal("34.0"), ts=datetime(2026, 3, 11)),
+    ]
+    satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("TEST")])
+    assert [s.karar for s in satirlar] == ["TOLERANSTA", "UYGUN_DEGIL"]
+    assert satirlar[1].red_kodlari == ["G7_BORC"], satirlar[1].red_kodlari
+
+
+def test_belirsiz_tolerans_durumunu_sifirlamaz():
+    """Kural 2'nin zincirdeki karşılığı: veri eksikliği 'temize çıkma' değil."""
+    eksik = dict(BEYANLAR_TEMIZ, b4_5=None)
+    kayitlar = [
+        _zincir_kayit(1, gelir_ozet=Decimal("5.2"), ts=datetime(2025, 8, 13)),
+        _zincir_kayit(2, ts=datetime(2026, 3, 11), beyanlar=eksik),
+        _zincir_kayit(3, gelir_ozet=Decimal("5.1"), ts=datetime(2026, 8, 5)),
+    ]
+    satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("TEST")])
+    assert [s.karar for s in satirlar] == ["TOLERANSTA", "BELIRSIZ", "UYGUN_DEGIL"]
+    assert satirlar[2].onceki_donem_tolerans is True, "BELIRSIZ durumu sıfırlamamalı"
+
+
+def test_kronoloji_gonderim_ts_ile_donem_etiketiyle_degil():
+    """Karışık dönem etiketleri; sıra zaman damgasından gelmeli."""
+    kayitlar = [
+        _zincir_kayit(2, gelir_ozet=Decimal("5.2"), ts=datetime(2026, 3, 11),
+                      yil=2025, periyot="Yıllık"),
+        _zincir_kayit(1, gelir_ozet=Decimal("1.0"), ts=datetime(2025, 8, 13),
+                      yil=2024, periyot="Yıllık"),
+        _zincir_kayit(3, gelir_ozet=Decimal("5.1"), ts=datetime(2026, 5, 6),
+                      yil=2026, periyot="3 Aylık"),
+    ]
+    satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("TEST")])
+    assert [s.bildirim_id for s in satirlar] == [1, 2, 3]
+    # 1 temiz -> 2 TOLERANSTA -> 3 aşım + önceki toleranslı -> UYGUN_DEGIL
+    assert [s.karar for s in satirlar] == ["UYGUN", "TOLERANSTA", "UYGUN_DEGIL"]
+
+
+def test_zincir_boslugu_isaretleniyor_durum_tasiniyor():
+    """Boşluk sonrası satır işaretlenir; GEÇİCİ davranış durumu TAŞIMAK.
+
+    Spec bu durumu tanımlamıyor — karar kullanıcıya bırakıldı.
+    """
+    kayitlar = [
+        _zincir_kayit(1, gelir_ozet=Decimal("5.2"), ts=datetime(2025, 8, 13)),
+        # 1 yıldan uzun sessizlik: arada bir dönem atlanmış
+        _zincir_kayit(2, gelir_ozet=Decimal("5.1"), ts=datetime(2026, 9, 20)),
+    ]
+    satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("TEST")])
+    assert satirlar[0].zincir_notu == panel.ZINCIR_TEMIZ
+    assert satirlar[1].zincir_notu == panel.ZINCIR_BOSLUGU
+    # Geçici davranış: durum taşınıyor, yani aşım eleme üretiyor
+    assert satirlar[1].karar == "UYGUN_DEGIL"
+    assert satirlar[1].onceki_donem_tolerans is True
+
+
+def test_bosluk_esigi_altindaki_aralik_isaretlenmez():
+    """Normal yarıyıl kadansı (ölçülen medyan 185 gün) boşluk değildir."""
+    kayitlar = [
+        _zincir_kayit(1, ts=datetime(2025, 8, 13)),
+        _zincir_kayit(2, ts=datetime(2026, 3, 11)),   # 210 gün
+    ]
+    satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("TEST")])
+    assert all(s.zincir_notu == panel.ZINCIR_TEMIZ for s in satirlar)
+
+
+def test_panel_karari_ozet_alanindan_uretiliyor():
+    """H5 varsayılanı zincirde de geçerli: kalemler DEĞİL, özet alanı.
+
+    Aksi halde tarihsel panel ile snapshot, tolerans zinciriyle ilgisi
+    olmayan bir sebeple ayrışırdı.
+    """
+    # kalemler %4,67 (UYGUN) üretir; özet %5,30 (TOLERANSTA)
+    b = _bildirim(gelir_pay=467, gelir_payda=10000, ozet=(Decimal("5.30"), 0, 0))
+    b.bildirim_id = 7
+    b.gonderim_ts = datetime(2025, 8, 13)
+    k = panel.ArsivKayit(bildirim=b, bildirim_id=7, tickerlar=["TEST"], yil=2025,
+                         periyot="6 Aylık", gonderim_ts=b.gonderim_ts, dosya="x.html")
+    satirlar = panel.panel_uret([k], [_sirket_kaydi("TEST")])
+    assert satirlar[0].karar == "TOLERANSTA", "özet alanı kullanılmalı"
+    assert satirlar[0].gelir_orani == Decimal("5.30")
+
+
+def test_muaf_sirket_kapsam_disi_zincirde_de():
+    kayitlar = [_zincir_kayit(1, ts=datetime(2025, 8, 13), ticker="AKBNK")]
+    satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("AKBNK", muaf=True)])
+    assert satirlar[0].karar == "KAPSAM_DISI"
+
+
+def test_panel_csv_semasi_spec_15():
+    kayitlar = [_zincir_kayit(1, gelir_ozet=Decimal("5.2"), ts=datetime(2025, 8, 13))]
+    satirlar = panel.panel_uret(kayitlar, [_sirket_kaydi("TEST")])
+    with tempfile.TemporaryDirectory() as d:
+        yol = panel.panel_yaz(satirlar, pathlib.Path(d) / "panel.csv")
+        with open(yol, newline="", encoding="utf-8-sig") as f:
+            okunan = list(csv.DictReader(f))
+    assert list(okunan[0]) == panel.KARAR_BASLIKLARI
+    r = okunan[0]
+    assert r["karar"] == "TOLERANSTA"
+    assert r["gecerlilik_baslangic"] == "2025-08-13 00:00:00"
+    assert r["red_kodlari"] == "G5_GELIR_TOLERANS"
+    assert r["onceki_donem_tolerans"] == "HAYIR"
+
+
+def _sirket_kaydi(ticker, muaf=False):
+    return Sirket(ticker=ticker, unvan=f"{ticker} A.Ş.", kap_member_uuid="u",
+                  kap_kfif_slug=None, mali_sektor_muaf=muaf)
 
 
 if __name__ == "__main__":

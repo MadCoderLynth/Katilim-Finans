@@ -11,6 +11,7 @@ Faz 4 mutabakatında sınanacak.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 
@@ -177,17 +178,39 @@ def seri_degerlendir(
     bildirimler: list[KafifBildirim],
     *,
     mali_sektor_muaf: bool = False,
+    oranlar_fn=None,
 ) -> list[tuple[KafifBildirim, KararSonucu]]:
     """Bir şirketin bildirimlerini kronolojik sırayla değerlendirir.
 
     Tolerans durumu şirket bazında taşınır (H4), kriter bazında değil:
     gelir kriterinden toleransa düşüp sonraki dönem borç kriterinde
     aşan bir şirket elenir.
+
+    `oranlar_fn`: bildirim -> `Oranlar`. Verilmezse oranlar kalemlerden
+    hesaplanır. **Panel bunu ÖZET alanını verecek şekilde geçiyor** (H5
+    varsayılanı, spec §2.3): iki farklı oran kaynağı kullanmak snapshot ile
+    tarihsel paneli sessizce ayrıştırırdı.
     """
+    # SIRALAMA YALNIZ `gonderim_ts` İLE. Dönem etiketi kronoloji taşımıyor:
+    #
+    #   - Eski anahtar `(yil, 0 if periyot=="6 Aylık" else 1, ...)` idi ve
+    #     1.2 ölçtü ki periyot yalnız 6 Aylık/Yıllık değil — `9 Aylık` (7)
+    #     ve `3 Aylık` (5) da var. Üçü de aynı kovaya (1) düşüyordu, yani
+    #     mayısta verilen bir 3 Aylık, ağustosta verilen 6 Aylık'tan SONRA
+    #     sıralanıyordu.
+    #   - Yıl bile güvenilir değil: futbol kulüpleri 31 Mayıs kapanışı
+    #     yüzünden "2024/Yıllık" formunu Ağustos 2025'te veriyor.
+    #
+    # Tolerans durum makinesi bu sırayı yürüdüğü için yanlış sıra doğrudan
+    # yanlış karar üretir. Spec §5.1 geçerlilik anını `gonderim_ts`'e
+    # bağlıyor; sıralama da aynı alana bağlı olmalı.
+    #
+    # Zaman damgası olmayan kayıt EN BAŞA değil en SONA konuyor: bilinmeyen
+    # bir tarihin geçmişe yerleştirilmesi, sonraki dönemlerin tolerans
+    # durumunu sessizce değiştirirdi.
     sirali = sorted(
         bildirimler,
-        key=lambda b: (b.yil or 0, 0 if b.periyot == "6 Aylık" else 1,
-                       b.gonderim_ts or 0),
+        key=lambda b: (b.gonderim_ts is None, b.gonderim_ts or datetime.min),
     )
     sonuclar = []
     onceki_toleransta = False
@@ -196,6 +219,7 @@ def seri_degerlendir(
             b,
             mali_sektor_muaf=mali_sektor_muaf,
             onceki_donem_toleransta=onceki_toleransta,
+            oranlar=oranlar_fn(b) if oranlar_fn else None,
         )
         sonuclar.append((b, s))
         # BELIRSIZ durumunda önceki durumu koruyoruz; veri eksikliği
