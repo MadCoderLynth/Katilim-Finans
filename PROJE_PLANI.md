@@ -182,29 +182,213 @@ büyüklüğü yazılı; sonuç cümlesi net.
 > 10'u ≤7 gün.)
 
 ```
-Görev: Uygunluk modülünü swing trading sistemine bağla.
+Görev: Üç şey — (a) olgunluk eşiği düzeltmesi, (b) katilim.api,
+(c) tek hisse kartı + basit portal.
 
-Ön koşul: 5.1 ✔. 5.2 ÖN KOŞUL DEĞİL — sonuca göre iki farklı
-entegrasyon biçimi var ama arayüz ikisinde de aynı:
+Ön koşul: 5.1 ✔. 5.2 ÖN KOŞUL DEĞİL.
+YENİ BAĞIMLILIK YOK. requirements.txt üç satır kalacak; portal
+stdlib http.server + subprocess ile yazılır.
 
-Etki BULUNDUYSA: olay akışı katalizör sinyali olarak bağlanır;
-pozisyon boyutuna etkisi 5.2'deki etki büyüklüğünden türetilir.
+---------------------------------------------------------------
+(a) OLGUNLUK EŞİĞİ — önce bu
+---------------------------------------------------------------
+olgunlasma_ts olay tipine duyarlı olsun: ilk olay +38g, KARŞI OLAY
++22g. Gerekçe: 38 gün ilk-bildirimden-ilk-düzeltmeye dağılımının
+p95'i; karşı olay zaten bir düzeltmedir, onun riski "ikinci düzeltme
+gelir mi" ve o dağılım ayrı — n=16, medyan 4g, p95 22g, max 22g
+(163 düzeltme grubunun %9,8'i). Yanlış eşik karşı olay penceresini
+yapay olarak negatif gösteriyordu. Testini ekle.
 
-Etki BULUNMADIYSA: yalnız risk filtresi. Katılım uygunluğu kaybı olan
-hisse tarama evreninden çıkarılır veya uyarı etiketi alır; sinyal
-üretmez. Bu daha muhtemel sonuç; öyleyse basit tut.
+---------------------------------------------------------------
+(b) katilim/api.py — dış dünyanın TEK giriş noktası
+---------------------------------------------------------------
+- uygunluk_durumu(ticker, tarih) -> Durum
+  Verilen tarihte BİLİNEN en güncel karar. Look-ahead yok:
+  gecerlilik_baslangic <= tarih olan en geç kayıt.
+- olaylar(ticker, baslangic=None, bitis=None) -> list[Olay]
+- hisse_karti(ticker, tarih=None) -> dict   (portal ve CLI bunu kullanır)
 
-Her iki durumda da arayüz aynı olsun:
-- katilim.api.uygunluk_durumu(ticker, tarih) -> Karar
-  Verilen tarihte BİLİNEN en güncel karar (look-ahead yok:
-  gecerlilik_baslangic <= tarih olan en geç kayıt)
-- katilim.api.olaylar(ticker, baslangic, bitis) -> list[Olay]
+ÜÇ TUZAK — hepsi belgeli, api'de AÇIKÇA ele alınacak:
+
+1. KARANTİNA. 22 kayıt self-check'ten geçmedi ama panelde duruyor.
+   uygunluk_durumu varsayılan olarak bunları DIŞARIDA bırakır
+   (karantinali=False parametresi ile istenirse döner). Bayrağı yok
+   sayan bir tüketici doğrulanmamış kararı sessizce alır.
+2. MUAF ≠ ELENMİŞ. KAPSAM_DISI "uygun değil" DEĞİLDİR — katılım
+   esaslı finans kuruluşları (ALBRK, KTLEV) KAFİF vermiyor ama
+   XKTUM'da. Durum nesnesi bunu ayrı bir alanla söylesin, çağıran
+   "UYGUN değil" diye okumasın.
+3. GÖRÜŞ YOK ≠ UYGUN DEĞİL. BEYAN_YOK, FORM_VAR_BILDIRIM_YOK,
+   BELIRSIZ ve tarih panelin başlangıcından önceyse -> GORUS_YOK
+   döner. None dönme, sessizce UYGUN_DEGIL'e düşme.
+
+Trading sistemi panelin iç yapısına BU ÜÇ FONKSİYON DIŞINDA
+bağlanmasın. CSV yollarını api içinde topla.
+
+Test: look-ahead (dünkü tarih dünkü kararı verir), karantina süzgeci,
+üç "görüş yok" durumu, KAPSAM_DISI'nin ayrı temsili.
+
+---------------------------------------------------------------
+(c) HİSSE KARTI + PORTAL
+---------------------------------------------------------------
+CLI: python3 -m katilim.cli kart THYAO      (terminalde aynı içerik)
+Portal: python3 -m katilim.portal           (tarayıcıyı açar)
+
+Kart içeriği (hisse_karti çıktısı):
+  unvan · pazar · sektör · muafiyet durumu
+  BUGÜNKÜ KARAR — büyük ve renkli (yeşil UYGUN / sarı TOLERANSTA /
+    kırmızı UYGUN_DEGIL / gri GORUS_YOK|KAPSAM_DISI) + red kodları
+  katılım endeksi üyeliği (endeks_uyeligi.csv) + XKTUM dönem geçmişi
+  KARAR GEÇMİŞİ tablosu: geçerlilik_ts | dönem | karar | üç oran |
+    red kodları; düzeltmeyle geçersiz kılınan satır soluk gösterilsin,
+    geçerli kayıt işaretli
+  OLAYLAR: tip, tarih, endeks yürürlük tarihi, olgunluk durumu
+    (kesinlik'i ÇAĞRI ANINDA hesapla — CSV'den okuma, 5.1 kararı)
+  DÜZELTMELER: neyin değiştiği
+  karantina veya g1_teyitsiz varsa görünür uyarı
+
+PORTAL TASARIMI — sade tut, tek dosya, tek sayfa:
+- Üstte ticker kutusu + Ara. Enter çalışsın. Bilinmeyen kod için
+  "evrende yok" desin, boş sayfa dönmesin.
+- Altta ayrı ve GÖRSEL OLARAK AYRILMIŞ bir "Bakım" bölümü, iki düğme:
+    [Bildirimleri tara]  -> cli bildirimler   (~650 istek, ~40 dk)
+    [Formları indir]     -> cli indir          (~2.600 istek, ~2 sa)
+
+  BU DÜĞMELER TEHLİKELİ, ona göre yaz:
+  * her birinin yanında SON KOŞU TARİHİ ve harcanacak BÜTÇE yazsın
+  * tek tıkla başlamasın — onay adımı olsun
+  * koşarken düğme kilitlensin, çıktı canlı aksın (satır satır)
+  * BütçeAşıldı veya hata olursa ekranda kırmızı görünsün, sessizce
+    bitmiş sayılmasın (kural 7)
+  * bu düğmeler bütçeyi kod içinden büyütmez; varsayılan bütçe sabit
+
+- Stil: tek <style> bloğu, koyu tema, sistem fontu, CDN yok, JS
+  çerçevesi yok. Amaç terminale girmemek, güzel bir site değil.
+- Portal VERİ ÜRETMEZ, yalnız api.py'yi çağırır. İkinci bir doğruluk
+  kaynağı olmasın.
+- Yalnız 127.0.0.1'e bağlan.
+
+Test: hisse_karti'nin bilinen bir tickerda beklenen alanları
+döndürmesi, bilinmeyen tickerda düzgün hata; portalın HTML üretimi
+(sunucu ayağa kaldırılmadan, fonksiyon düzeyinde).
 
 Bu iki fonksiyon dışında trading sistemi panelin iç yapısına bağlanmasın.
 ```
 
-**Çıkış kriteri:** `katilim.api` iki fonksiyonu sağlıyor; look-ahead'sizlik
-test edilmiş; entegrasyon biçimi 5.2 sonucuyla tutarlı.
+**Çıkış kriteri:** `python3 -m katilim.portal` açılıyor, ticker girilince
+kart geliyor, iki bakım düğmesi onaylı çalışıyor. `katilim.api` üç
+fonksiyonu sağlıyor; look-ahead ve karantina süzgeci test edilmiş.
+Yeni bağımlılık yok.
+
+---
+
+## 5.4 — Portal okunabilirliği + kapsam sondası
+
+```
+Görev: dört iş. (a) legend, (b) kaynak bağlantıları, (c) "ne"
+detayı, (d) BEYAN_YOK kapsam sondası.
+
+(a)–(c) ağa çıkmaz. (d) için ayrı bütçe isteyeceksin.
+
+---------------------------------------------------------------
+(a) KOD LEJANDI — kart üstünde açılır bir bölüm
+---------------------------------------------------------------
+Kod adları ezberlenmek zorunda kalmasın. Kaynak: karar.py'deki
+KESIN_KAPILAR ve model.py'deki BEYAN_ALANLARI — ELLE YAZMA, oradan
+türet ki kural değişirse lejand da değişsin.
+
+  G0_MUAF            mali sektör muafiyeti — KAPSAM DIŞI (elenmiş değil)
+  G1_ESAS_SOZLESME   esas sözleşmede Standart md. 1.2 faaliyeti/ortaklığı
+  G2_IMTIYAZ         kâr payı veya tasfiye payı imtiyazı (md. 1.8)
+  G3_MADDE_15        md. 1.5 kamuoyu açıklaması / mahkeme kararı
+  G4_DOGRUDAN_AYKIRI Rehber md. 3.1 — 4A'daki yedi faaliyetten biri
+  G5_GELIR           uygun olmayan gelir > %5
+  G6_VARLIK          uygun olmayan varlık > %33
+  G7_BORC            uygun olmayan borç > %33
+  ..._TOLERANS       limit aşıldı ama tolerans bandı içinde (md. 3.5)
+
+Bandları da yaz: gelir %5 → %5,5 · varlık/borç %33 → %36,3.
+
+---------------------------------------------------------------
+(b) KAYNAK BAĞLANTILARI — her iddia tıklanabilir olsun
+---------------------------------------------------------------
+- Her karar satırındaki bildirim_id -> https://kap.org.tr/tr/Bildirim/{id}
+  (yeni sekmede). Kaynağı görmeden karara güvenilmemeli.
+- XKTUM dönem geçmişindeki her dönem -> o dönemin yerel PDF'i
+  (veri/referans/ham/…). Portal 127.0.0.1'de olduğu için dosyayı
+  kendisi servis etsin; file:// bağlantısı tarayıcıda çalışmaz.
+- Kaynak dosya adı kartta görünsün, gizli link olmasın.
+
+---------------------------------------------------------------
+(c) "NE" DETAYI — sıfır yeni veri
+---------------------------------------------------------------
+Kart şu an yalnız kapı kodunu gösteriyor. Hangi BEYANIN tetiklediğini
+de göster; veri zaten elimizde.
+  G4 -> hangi b4_* açık: alkol / domuz / tütün üretim-toptan / kumar /
+        katılım dışı finans / aykırı yayıncılık / otel-turizm-eğlence
+  G1 -> b1_1 (faaliyet) mi b1_2 (ortaklık) mı
+  G2 -> kâr payı mı tasfiye payı mı
+Adları model.py::BEYAN_ALANLARI'ndan al.
+
+DÜRÜSTLÜK NOTU — kartta görünsün: KAFİF'in beyanı "şirketin kendisi,
+tüzel kişi ortakları VEYA iştirakleri" diye tek bir evet/hayır. Form
+HANGİSİ olduğunu söylemiyor. Yani "ne" biliniyor, "kim" bilinmiyor.
+Kart bunu açıkça yazsın ki kullanıcı iştirak sandığı şeyin şirketin
+kendisi olabileceğini bilsin. "Kim" sorusu KAP finansal rapor
+dipnotlarını (bağlı ortaklık/iştirak tablosu) gerektirir — ayrı veri
+kaynağı, bu adımın kapsamı DIŞINDA.
+Serbest metin alanları (madde_4/7/16) kartta gösterilsin; gelir
+kalemleriyle ilgili ama denetim izi olarak değerli (THY'de 5G/7'nin
+katılım bankası mevduatı olduğu oradan anlaşılıyor).
+
+---------------------------------------------------------------
+(d) KAPSAM SONDASI — bütçe iste, sonra koş
+---------------------------------------------------------------
+BEYAN_YOK etiketli 73 şirket için /tr/kfif/{id}-{slug} ikili sondası:
+form var mı yok mu. ~73 istek.
+
+Gerekçe: 4.0'da bu mekanizma ("form var, bildirim yok") bulunmuştu ama
+yalnız XKTUM üyesi 8 şirkete bakılmıştı. BIGTK (BİG MEDYA, ANA PAZAR,
+0 bildirim kaydı) aynı örüntüde ve XKTUM üyesi değil — yani sonda
+yapılmamış 65 şirket kaldı.
+
+SONDA KAPSAMI ARTIRMAZ, ETİKETİ DÜZELTİR. kfif rotası panele giremiyor
+(zaman damgası yok, b4_5/6/7 okunamıyor — rota keşfi §6, yasak).
+Formu olanlar FORM_VAR_BILDIRIM_YOK'a geçer; "beyan vermemiş" ile
+"beyanı var ama biz göremiyoruz" aynı şey değil.
+
+Sonda gövdeleri önbelleğe YAZILMASIN (yasak rotanın gövdesi arşive
+karışmasın). Sonuç: kaç şirkette form var, panelin fiili kapsamı ne
+kadar iyimserdi. Rapora yaz.
+```
+
+**Çıkış kriteri:** Lejand kartta ve `karar.py`'den türetiliyor; her
+bildirim_id KAP'a, her XKTUM dönemi yerel PDF'e tıklanabiliyor; G1/G2/G4
+hangi beyanın tetiklediğini gösteriyor ve "kim" bilinmediği yazılı;
+73 şirketin sonda sonucu raporlanmış, etiketler düzeltilmiş.
+
+---
+
+## Bakım — ertelenemez
+
+> Proje park edilse bile bu durmaz.
+
+Sorgu penceresi 1 gün/gün kayıyor. Kayan şey **keşif**: kimlik
+`bildirim_gecmisi.csv`'ye yazıldıysa form sonradan da inebiliyor, ama
+kimlik pencereden düşerse o form bir daha bulunamaz.
+
+**Yılda iki koşu yeter, dalgalardan sonra:**
+
+| Ne zaman | Komut | Süre |
+|---|---|---|
+| Eylül sonu (6 Aylık dalgası) | `bildirimler` → `indir` | ~1 sa |
+| Nisan sonu (Yıllık dalgası) | `bildirimler` → `indir` | ~1 sa |
+
+Portalın iki düğmesi tam olarak bunun içindir. Bir yılı tamamen
+atlamak panelde **kalıcı** bir delik açar.
+
+Arşiv 07.08.2026'da bitiyor; 2026/6 Aylık dalgası hâlâ akıyor.
+**İlk koşu: eylül sonu.**
 
 ---
 

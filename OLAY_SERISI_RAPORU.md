@@ -11,9 +11,9 @@
 ## 0. Sonuç — iki cümle
 
 Panelden **206 olay / 137 pay kodu** çıkarıldı ve look-ahead disiplini
-mutasyon testiyle kanıtlandı (§4). Asıl bulgu ölçümde: **karşı olayların
-temiz penceresi NEGATİF** — düzeltme p95'ini bekleyen bir kural onları
-hiç yakalayamaz (§3).
+mutasyon testiyle kanıtlandı (§4). Asıl bulgu ölçümde: temiz sinyal
+penceresi ilk bildirimde **18 gün**, karşı olayda **6 gün** — sinyal var
+ama dar, ve karşı olayda üç kat dar (§3).
 
 ---
 
@@ -70,14 +70,15 @@ look-ahead'sız.
 
 ---
 
-## 3. ★ PENCERE ÖLÇÜMÜ — sinyal 2-4 hafta, karşı olayda YOK
+## 3. ★ PENCERE ÖLÇÜMÜ — sinyal 2-4 hafta, karşı olayda 1 hafta
 
 Olgunluk **etiket olarak değil TARİH olarak** saklanıyor: `kesinlik`
 zamana bağlıdır, tek bir etiket backtest'i o etiketin hesaplandığı ana
 kilitlerdi. Olay iki eşik zamanı taşıyor:
 
 ```
-olgunlasma_ts = olay_ts + 38 gün          (2.3'ün p95 düzeltme penceresi)
+olgunlasma_ts = olay_ts + 38 gün   (ilk bildirim: ilk→ilk düzeltme p95)
+              = olay_ts + 22 gün   (KARŞI OLAY: ilk→ikinci düzeltme p95)
 kesinlesme_ts = sonraki DÖNEMİN ilk yayını
 ```
 
@@ -85,24 +86,29 @@ Backtester `kesinlik(t)` çağırır ve kendi saatiyle karşılaştırır.
 
 ### Öncüllük — ikiye ayrılmalı
 
-| | n | öncüllük medyanı | p95 (38 gün) sonrası |
-|---|---|---|---|
-| ilk bildirim | 122 | 56 gün | **+18 gün** |
-| **karşı olay** | 84 | 28 gün | **−10 gün** |
-| tümü | 206 | 50 gün | +12 gün |
+> ### ⚠ DÜZELTME (5.3-a, 11 Ağu 2026): eşik olay tipine duyarlı olmalıydı
+>
+> Bu bölümün ilk yazımı karşı olayın temiz penceresini **−10 gün** ölçtü
+> ve "pencere kapanıyor" sonucuna vardı. **O bir eşik hatasının
+> artefaktıydı:** 38 gün *ilk bildirimden ilk düzeltmeye* dağılımının
+> p95'i ve karşı olaya uygulanamaz. Karşı olay zaten bir düzeltmedir;
+> riski "ikinci düzeltme gelir mi" ve o dağılım çok daha dar —
+> ölçüldü: 163 düzeltme grubunun **16'sında (%9,8)** ikinci düzeltme var,
+> ilk→ikinci gecikme **medyan 4 · p95 22 · max 22 gün**.
 
-**Karşı olaylarda pencere kapanıyor.** Düzeltme zaten geç geliyor
-(medyan 21 gün); üstüne bir p95 daha beklemek revizyon tarihini aşıyor.
-Yani düzeltmelerden gelen bilgi **ancak hızlı işlem edilirse**
-kullanılabilir — ki bu tam olarak düzeltme riskinin en yüksek olduğu
-rejimdir.
+| | n | öncüllük medyanı | p95 eşiği | sonrası |
+|---|---|---|---|---|
+| ilk bildirim | 122 | 56 gün | 38 gün | **+18 gün** |
+| **karşı olay** | 84 | 28 gün | **22 gün** | **+6 gün** |
+
+**Pencere kapanmıyor, ama karşı olayda üç kat dar.** Düzeltmeden gelen
+bilgi kullanılabilir; yalnız hareket alanı ilk bildirimin üçte biri.
 
 Bu, 5.2'nin ölçmesi gereken ödünleşmenin sayısal çekirdeği:
 
 ```
-medyanda (21 gün) işlem   -> pencere geniş, düzeltme riski üstlenilir
-p95'te   (38 gün) işlem   -> ilk bildirimde 18 gün kalır,
-                              karşı olayda HİÇ kalmaz
+ilk bildirim : 56 gün öncüllük − 38 gün p95 = 18 gün temiz
+karşı olay   : 28 gün öncüllük − 22 gün p95 =  6 gün temiz
 ```
 
 ### Doğrulama — görev metnindeki iki vaka

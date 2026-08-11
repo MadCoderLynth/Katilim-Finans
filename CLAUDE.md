@@ -22,6 +22,8 @@ python3 -m katilim.cli mutabakat                          # ön mutabakat (Faz 4
 python3 arac/xktum_referans.py --indir --ayristir --kur    # XKTUM referansı (Faz 4.1)
 python3 -m katilim.cli mutabakat --donem 2026-05          # değişim mutabakatı (Faz 4.2)
 python3 -m katilim.cli olaylar                            # olay serisi (Faz 5.1)
+python3 -m katilim.cli kart THYAO                         # hisse kartı (Faz 5.3)
+python3 -m katilim.portal                                 # yerel portal (Faz 5.3)
 python3 -m katilim.cli dogrula veri/ham/DOSYA.html        # ayrıştır + self-check + karar
 python3 -m katilim.cli dok veri/ham/DOSYA.html            # tanı: tabloları imzalarıyla dök
 python3 -m katilim.cli toplu veri/ham --csv veri/panel/panel.csv
@@ -153,6 +155,15 @@ bağımsız KAFİF parser'ı RYGYO 2025/Yıllık'ta aynı üç oranı üretiyor
 
 ## Sıradaki iş
 
+> ## ⏸ PROJE RAFTA (11 Ağu 2026) — @RAF_NOTU_2026-08-11.md
+>
+> Geliştirme durduruldu, **bakım durmadı.** Sorgu penceresi 1 gün/gün
+> kayıyor: yılda iki koşu (eylül ve nisan sonları, portalın iki düğmesi,
+> ~1 sa) atlanırsa panelde **kalıcı** delik açılır. İlk koşu: **Eylül 2026.**
+>
+> Neden durduruldu, ne çalışıyor, açık bulgular ve geri dönüş noktası
+> raf notunda. Aşağıdaki kurallar geçerliliğini koruyor.
+
 **Faz planı ve her adımın promptu: @PROJE_PLANI.md.** Adım sırası, çıkış
 kriterleri ve otomatikleştirilmeyecek karar noktaları orada. Aşağıdaki özet
 onunla çelişirse plan değil bu dosya esastır.
@@ -164,10 +175,10 @@ keşfi · **1.2** bildirim sorguları · **1.4a** form arşivi · **1.3** parser
 kapısı · **1.4b** snapshot paneli · **1.1b** özet sayfaları · **4.0** ön
 mutabakat · **2.3** düzeltme çözümü · **3.1** tolerans zinciri ·
 **4.1** XKTUM tarihsel referansı · **4.2** değişim mutabakatı ·
-**5.1** olay serisi.
-Testler: 238 geçiyor (27 motor + 9 çekici + 24 evren + 8 derinlik +
+**5.1** olay serisi · **5.3** api + portal.
+Testler: 263 geçiyor (27 motor + 9 çekici + 24 evren + 8 derinlik +
 16 bildirim + 7 rsc + 13 toplayıcı + 9 pilot + 28 panel + 20 özet +
-16 mutabakat + 13 xktum + 23 değişim + 25 olay).
+16 mutabakat + 13 xktum + 23 değişim + 28 olay + 22 api).
 
 **DOĞRULAMA KAPISI GEÇİLDİ.** 4.2'de 95/95 olay uyuştu, uyuşmazlık sıfır;
 testin gücü ölçüldü (taban %47/%53, şansla olma olasılığı ≈10⁻²⁹).
@@ -198,8 +209,29 @@ Spec §4'ün "Faz 4 öncesi panel araştırma çıktısıdır" kaydı artık ge�
 - **`endeks_yururluk_ts` duyurusu geçmiş revizyondan türetiliyor** —
   28.09.2025'te yayımlanan form doğru biçimde 01.05.2026'ya bağlanıyor.
 
-Sıradaki: **5.2** (fiyat etkisi — **KAYNAK SEÇİLMEDİ, açık karar**) →
-**5.3** (`katilim.api`). 5.3 ağa çıkmıyor.
+**Faz 5.3 bitti — `katilim/api.py` dış dünyanın TEK giriş noktası.**
+Trading sistemi panelin iç yapısına `uygunluk_durumu` / `olaylar` /
+`hisse_karti` dışında bağlanmasın; CSV yolları api içinde toplandı.
+
+- **ÜÇ TUZAK api'de açıkça ele alındı.** (1) Karantinalı kayıt varsayılan
+  olarak dışarıda, `karantinali=True` ile alınır, bayrak her zaman doğru.
+  (2) `KAPSAM_DISI` → `uygun=None`, `kapsam_disi=True`; "uygun değil"
+  DEĞİL. (3) `BEYAN_YOK`/`BELIRSIZ`/panel öncesi tarih → `GORUS_YOK`;
+  `None` dönülmüyor, `UYGUN_DEGIL`'e düşülmüyor. **`Durum.uygun` üç
+  değerli** — yorumlamadan önce `gorus_var`'a bakılmalı.
+- **OLGUNLUK EŞİĞİ DÜZELTİLDİ (a).** `olgunlasma_ts` artık olay tipine
+  duyarlı: ilk olay +38g, **karşı olay +22g**. 38 gün ilk→ilk düzeltme
+  p95'i; karşı olayın riski "ikinci düzeltme" ve o dağılım ayrı — ölçüldü:
+  163 grubun 16'sında (%9,8) ikinci düzeltme, gecikme medyan 4 · p95 22 ·
+  max 22. **5.1'in "karşı olay penceresi NEGATİF (−10 gün)" bulgusu bu
+  yanlış eşiğin artefaktıymış; doğru eşikle +6 gün.**
+- **Portal veri ÜRETMEZ**, yalnız api'yi çağırır; `kesinlik` çağrı anında
+  hesaplanıyor. Yalnız 127.0.0.1, tek dosya, CDN/JS çerçevesi yok.
+  Bakım düğmeleri onay adımlı, koşarken kilitli, çıktı satır satır akıyor,
+  hata/BütçeAşıldı kırmızı. **Bütçe kod içinden büyütülmüyor.**
+- **Yeni bağımlılık yok** — portal stdlib `http.server` + `subprocess`.
+
+Sıradaki: **5.2** (fiyat etkisi — **KAYNAK SEÇİLMEDİ, açık karar**).
 Ertelenen/düşürülenler ve gerekçeleri @PROJE_PLANI.md'de.
 
 Her tamamlanmış adımın ölçümü kendi raporunda; **bu dosya onları
@@ -219,6 +251,7 @@ tekrarlamaz.** Anlatı arşivi: @PLAN_ARSIV.md (otomatik yüklenmez).
 | 4.1 XKTUM referansı | @XKTUM_REFERANS_RAPORU.md |
 | 4.2 değişim mutabakatı | @MUTABAKAT_2025-10.md · @MUTABAKAT_2026-05.md |
 | 5.1 olay serisi | @OLAY_SERISI_RAPORU.md |
+| 5.3 api + portal | `katilim/api.py` · `katilim/portal.py` (modül başlıkları) |
 
 ### Kalıcı olarak taşınan bulgular
 
@@ -264,6 +297,11 @@ Aşağıdakiler rapora değil buraya ait: sonraki her adımı bağlıyorlar.
 - **Kapsam sınırı: form var, bildirim yok.** Yeni halka açılan 8 şirketin
   KAFİF'i kfif sayfasında var, bildirim akışında yok. Geçici — ilk
   dönemsel beyanla kapanır.
+  ⚠ **"539 şirket kapsanıyor" sayısı İYİMSER.** O sonda yalnız XKTUM
+  üyesi 8 şirkete yapıldı; `BEYAN_YOK` etiketli 73 şirketin ~65'ine hiç
+  bakılmadı. BIGTK (ANA PAZAR, 0 bildirim kaydı, Fintables'ta 2024/12
+  formu var) aynı örüntüde ve XKTUM üyesi değil. Sonda promptu:
+  @PROJE_PLANI.md §5.4(d).
 
 ### Açık kararlar
 

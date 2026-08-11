@@ -603,7 +603,8 @@ def cmd_olaylar(args) -> int:
     print(f"  olay / pay kodu   : {o['olay']} / {o['pay_kodu']}")
     print(f"  tip               : {o['tip']}")
     print(f"  olgunluk          : {o['kesinlik']}"
-          f"   (eşik p95={olay.DUZELTME_P95_GUN} gün)")
+          f"   (eşik: ilk {olay.DUZELTME_P95_GUN}g / karşı olay "
+          f"{olay.IKINCI_DUZELTME_P95_GUN}g)")
     print(f"  karşı olay        : {o['karsi_olay']}  (düzeltme; İPTAL yok)")
     print(f"  G1 teyitsiz       : {o['g1_teyitsiz']}  "
           "(olumlu karar, düzeltmeyle teyit edilmemiş)")
@@ -620,11 +621,95 @@ def cmd_olaylar(args) -> int:
                    for x in alt if x.endeks_yururluk_ts)
         if g:
             med = g[len(g) // 2]
+            # Eşik olay tipine duyarlı (ilk 38g / karşı olay 22g).
+            esik = olay.olgunlasma_penceresi(bool(alt and alt[0].karsi_olay))
             print(f"    {ad}: n={len(alt):3d}  öncüllük medyan {med:3d} gün  "
-                  f"-> p95 sonrası {med - olay.DUZELTME_P95_GUN:+d} gün")
+                  f"-> p95({esik}g) sonrası {med - esik:+d} gün")
 
     yol = olay.yaz(olaylar, args.csv or olay.OLAY_CSV)
     print(f"\n  {len(olaylar)} olay -> {yol}")
+    return 0
+
+
+_ANSI = {"UYGUN": "\033[42;30m", "TOLERANSTA": "\033[43;30m",
+         "UYGUN_DEGIL": "\033[41;37m", "GORUS_YOK": "\033[100;37m",
+         "KAPSAM_DISI": "\033[100;37m"}
+_SIFIRLA = "\033[0m"
+
+
+def cmd_kart(args) -> int:
+    """Faz 5.3 — tek hisse kartı. Portalla AYNI veriyi kullanır (`api`)."""
+    from . import api
+
+    try:
+        k = api.hisse_karti(args.ticker)
+    except api.BilinmeyenTicker as e:
+        print(f"BİLİNMEYEN PAY KODU: {e}", file=sys.stderr)
+        return 2
+    except api.VeriYok as e:
+        print(f"VERİ YOK: {e}", file=sys.stderr)
+        return 2
+
+    d = k["durum"]
+    renkli = sys.stdout.isatty()
+    boya = _ANSI.get(d.karar, "") if renkli else ""
+    kapat = _SIFIRLA if renkli and boya else ""
+
+    print(f"{k['ticker']} — {k['unvan']}")
+    print(f"  {k['pazar']} · {k['sektor']}")
+    print(f"  muafiyet: {k['muafiyet']} · beyan: {k['beyan_durumu']}")
+    print()
+    print(f"  {boya} {d.karar} {kapat}   {', '.join(d.red_kodlari) or '—'}")
+    if d.gecerlilik_baslangic:
+        print(f"  geçerlilik {d.gecerlilik_baslangic:%d.%m.%Y %H:%M} · "
+              f"{d.yil}/{d.periyot} · oranlar "
+              f"{d.gelir_orani}/{d.varlik_orani}/{d.borc_orani}")
+    if d.sebep:
+        print(f"  {d.sebep}")
+
+    for u in k["uyarilar"]:
+        print(f"  ⚠ {u}")
+
+    kat = [x for x in k["endeksler"] if "KATILIM" in x.upper()]
+    print(f"\n  KATILIM ENDEKSLERİ: {', '.join(kat) or '—'}")
+    for r in k["xktum_gecmisi"]:
+        print(f"    {r['donem_baslangic']}..{r['donem_bitis']}  "
+              f"{'ÜYE' if r['endekste_mi'] == 'EVET' else 'hayır'}")
+
+    print("\n  KARAR GEÇMİŞİ")
+    for r in k["karar_gecmisi"]:
+        isaret = "*" if r["gecerli_kayit"] else " "   # * = geçerli kayıt
+        soluk = "" if r["gecerli_kayit"] else "  (geçersiz kılındı)"
+        kar = " ⚠KARANTİNA" if r["karantinali"] else ""
+        print(f"   {isaret} {r['gecerlilik_baslangic']:%d.%m.%Y %H:%M} "
+              f"{r['yil']}/{r['periyot']:9s} {r['karar']:12s} "
+              f"{r['gelir_orani']:>6}/{r['varlik_orani']:>6}/{r['borc_orani']:>6} "
+              f"{r['red_kodlari'] or '—'}{soluk}{kar}")
+
+    print("\n  OLAYLAR")
+    if not k["olaylar"]:
+        print("    — (ilk gözlem bir değişim değildir)")
+    for o in k["olaylar"]:
+        oncul = ((o.endeks_yururluk_ts - o.olay_ts.date()).days
+                 if o.endeks_yururluk_ts else "—")
+        notlar = [x for x in (
+            "karşı olay" if o.karsi_olay else "",
+            "G1 teyitsiz" if o.g1_teyitsiz else "",
+            o.kilpayi_kriterleri) if x]
+        # `kesinlik` ÇAĞRI ANINDA hesaplanıyor — CSV'den okunmuyor (5.1).
+        print(f"    {o.olay_tipi:18s} {o.olay_ts:%d.%m.%Y} -> "
+              f"yürürlük {o.endeks_yururluk_ts or '—'} ({oncul} gün) "
+              f"[{o.kesinlik(k['tarih'])}] {' · '.join(notlar)}")
+
+    if k["duzeltmeler"]:
+        print("\n  DÜZELTMELER")
+        for r in k["duzeltmeler"]:
+            degisen = "; ".join(x for x in (r.get("degisen_oranlar", ""),
+                                            r.get("degisen_beyanlar", "")) if x)
+            print(f"    {r['yil']}/{r['periyot']:9s} "
+                  f"{r.get('duzeltme_gonderim_ts', '')[:16]}  {degisen or '—'}"
+                  + ("  KARAR ÇEVİRDİ"
+                     if r.get("karar_ceviren_beyan") == "EVET" else ""))
     return 0
 
 
@@ -813,6 +898,10 @@ def main(argv=None) -> int:
                     help="duman testi: yalnız ilk N pay kodunun formları")
     sp.add_argument("--her", type=int, default=50, help="kaç bildirimde bir ilerleme bas")
     sp.set_defaults(fn=cmd_indir)
+
+    sp = alt.add_parser("kart")
+    sp.add_argument("ticker")
+    sp.set_defaults(fn=cmd_kart)
 
     sp = alt.add_parser("olaylar")
     sp.add_argument("--panel-csv", default="veri/panel/panel.csv")

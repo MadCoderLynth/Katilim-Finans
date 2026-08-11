@@ -227,7 +227,9 @@ def test_look_ahead_olgunluk_alanlari_ileriye_donuk_ve_izole():
             assert o.kesinlesme_ts > o.olay_ts, (
                 f"{o.ticker}: kesinlesme_ts olaydan önce/eşit — anlamsız"
             )
-        assert o.olgunlasma_ts == o.olay_ts + timedelta(days=O.DUZELTME_P95_GUN)
+        assert o.olgunlasma_ts == o.olay_ts + timedelta(
+            days=O.olgunlasma_penceresi(o.karsi_olay)
+        )
         # Olgunluk alanları karar girdilerine karışmamış olmalı.
         assert o.kesinlesme_ts not in o.girdi_ts
 
@@ -505,9 +507,11 @@ def test_gercek_dogub_pencere_olcumu():
 
 
 def test_gercek_karsi_olaylar_daha_gec_geliyor():
-    """Karşı olaylar ilk bildirimlerden GEÇ gelir; öncüllük penceresi dar.
+    """Karşı olaylar ilk bildirimlerden GEÇ gelir ama penceresi kapanmaz.
 
-    Bu, 5.2'nin ölçeceği hız/kesinlik ödünleşmesinin sayısal temeli.
+    5.1 ilk yazımında karşı olayın temiz penceresi −10 gün ölçülmüştü;
+    o **yanlış eşiğin artefaktıydı** (ilk bildirimin 38 günü karşı olaya
+    uygulanıyordu). Doğru eşikle (22 gün) pencere pozitife dönüyor.
     """
     if not _gercek_veri():
         print("    ATLANDI: panel/referans yok")
@@ -521,8 +525,68 @@ def test_gercek_karsi_olaylar_daha_gec_geliyor():
     assert ilk[len(ilk) // 2] > karsi[len(karsi) // 2], (
         "karşı olayların medyan öncüllüğü ilk bildirimlerden küçük olmalı"
     )
-    # p95 düzeltme penceresi düşünce karşı olaylarda pencere KAPANIYOR.
-    assert karsi[len(karsi) // 2] - O.DUZELTME_P95_GUN < 0
+    # Doğru eşikle karşı olayda da temiz pencere kalıyor.
+    temiz = karsi[len(karsi) // 2] - O.IKINCI_DUZELTME_P95_GUN
+    assert temiz > 0, f"karşı olay temiz penceresi {temiz} gün"
+
+
+def test_olgunlasma_esigi_olay_tipine_duyarli():
+    """★ (a) — karşı olay AYRI bir dağılımdan eşik alır.
+
+    38 gün ilk-bildirimden-ilk-düzeltmeye p95'i. Karşı olay zaten bir
+    düzeltmedir; riski "ikinci düzeltme gelir mi" ve o dağılım ayrı:
+    163 düzeltme grubunun 16'sında (%9,8) ikinci düzeltme var, ilk→ikinci
+    gecikme medyan 4 · p95 22 · max 22.
+    """
+    assert O.olgunlasma_penceresi(False) == O.DUZELTME_P95_GUN == 38
+    assert O.olgunlasma_penceresi(True) == O.IKINCI_DUZELTME_P95_GUN == 22
+    assert O.IKINCI_DUZELTME_MEDYAN_GUN == 4
+    assert O.IKINCI_DUZELTME_MAX_GUN == 22
+    assert abs(O.IKINCI_DUZELTME_ORANI - 0.098) < 1e-9
+
+
+def test_karsi_olay_daha_erken_olgunlasiyor():
+    """Aynı anda yayımlanan iki olaydan karşı olan 16 gün önce olgunlaşır."""
+    with tempfile.TemporaryDirectory() as d:
+        olaylar = _uret(d, [
+            _p("AAA", "UYGUN", "2025-08-08 18:00:00", bid="1"),
+            _p("AAA", "UYGUN_DEGIL", "2025-08-19 18:00:00", bid="2",
+               yil="2025", periyot="Yıllık"),
+            _p("AAA", "UYGUN", "2025-09-05 18:00:00", bid="3",
+               yil="2025", periyot="Yıllık", duzeltme="DUZENLENEN"),
+        ])
+    ilk = next(o for o in olaylar if not o.karsi_olay)
+    karsi = next(o for o in olaylar if o.karsi_olay)
+    assert (ilk.olgunlasma_ts - ilk.olay_ts).days == 38
+    assert (karsi.olgunlasma_ts - karsi.olay_ts).days == 22
+
+
+def test_gercek_ikinci_duzeltme_dagilimi_dondu():
+    """Eşik ölçümden geliyor: panelden yeniden hesaplanıp doğrulanıyor.
+
+    Sabit değişirse bu test kırılır ve sebebi araştırılır — eşiği
+    'testi geçirmek için' güncellemek yasaktır (kural 1'in ruhu).
+    """
+    if not _gercek_veri():
+        print("    ATLANDI: panel yok")
+        return
+    import collections
+    gruplar = collections.defaultdict(list)
+    with open(_PANEL, encoding="utf-8-sig", newline="") as f:
+        for r in csv.DictReader(f):
+            if r["gecerlilik_baslangic"]:
+                gruplar[(r["ticker"], r["yil"], r["periyot"])].append(
+                    datetime.strptime(r["gecerlilik_baslangic"],
+                                      "%Y-%m-%d %H:%M:%S"))
+    for v in gruplar.values():
+        v.sort()
+    coklu = [v for v in gruplar.values() if len(v) > 1]
+    ucuncu = [v for v in gruplar.values() if len(v) > 2]
+    assert len(coklu) == 163, len(coklu)
+    assert len(ucuncu) == 16, len(ucuncu)
+    gecikme = sorted((v[2] - v[1]).days for v in ucuncu)
+    assert max(gecikme) == O.IKINCI_DUZELTME_MAX_GUN
+    assert gecikme[len(gecikme) // 2] == O.IKINCI_DUZELTME_MEDYAN_GUN
 
 
 if __name__ == "__main__":

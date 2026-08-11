@@ -85,6 +85,31 @@ DUZELTME_MAX_GUN = 55
 # Karar çeviren düzeltmelerin hepsi bu sürenin altında geldi.
 KARAR_CEVIREN_MAX_GUN = 31
 
+# --- İKİNCİ düzeltme penceresi: AYRI BİR DAĞILIM ---------------------------
+#
+# 38 gün, **ilk bildirimden ilk düzeltmeye** dağılımının p95'idir. Karşı olay
+# zaten bir düzeltmedir; onun riski "ikinci bir düzeltme gelir mi" sorusudur
+# ve o dağılım çok daha dar (ölçüldü: 163 düzeltme grubunun 16'sında, yani
+# %9,8'inde ikinci düzeltme var; ilk→ikinci gecikme medyan 4 · p95 22 · max 22).
+#
+# İlk olayın eşiğini karşı olaya uygulamak, karşı olay penceresini **yapay
+# olarak negatif** gösteriyordu (5.1 raporu: −10 gün). Doğru eşikle pencere
+# gerçek değerine dönüyor.
+IKINCI_DUZELTME_ORANI = 0.098
+IKINCI_DUZELTME_MEDYAN_GUN = 4
+IKINCI_DUZELTME_P95_GUN = 22
+IKINCI_DUZELTME_MAX_GUN = 22
+
+
+def olgunlasma_penceresi(karsi_olay: bool) -> int:
+    """Olayın olgunlaşması için beklenecek gün — olay tipine duyarlı.
+
+    İlk bildirim p95=38 gün (ilk→ilk düzeltme), karşı olay p95=22 gün
+    (ilk→ikinci düzeltme). İkisi ayrı dağılımdır; tek eşik kullanmak
+    karşı olayları haksız yere değersiz gösterir.
+    """
+    return IKINCI_DUZELTME_P95_GUN if karsi_olay else DUZELTME_P95_GUN
+
 # Kılpayı bandı: limite bu kadar puan kalmışsa uyarı. Gerekçe THY 2025:
 # gelir oranı %4,92, limit %5 — 0,08 puan mesafede ve endeks dışı.
 KILPAYI_ESIK = Decimal("0.5")
@@ -368,7 +393,7 @@ def olay_serisi(
             # türeten revizyon duyurusu. İkisi de olay anından ÖNCE.
             girdi = tuple(t for t in (ts, duyuru_ts) if t is not None)
 
-            def _olay(tip: str, onceki: str, **kw) -> Olay:
+            def _olay(tip: str, onceki: str, *, karsi_olay: bool, **kw) -> Olay:
                 return Olay(
                     ticker=ticker, olay_tipi=tip, olay_ts=ts,
                     endeks_yururluk_ts=yururluk,
@@ -377,7 +402,12 @@ def olay_serisi(
                     bildirim_id=r.get("bildirim_id", "") or "",
                     yil=r.get("yil", "") or "", periyot=r.get("periyot", "") or "",
                     duzeltme_izi=duzeltme_izi,
-                    olgunlasma_ts=ts + timedelta(days=DUZELTME_P95_GUN),
+                    karsi_olay=karsi_olay,
+                    # Eşik olay tipine duyarlı: karşı olay zaten bir
+                    # düzeltmedir, riski "ikinci düzeltme" dağılımından gelir.
+                    olgunlasma_ts=ts + timedelta(
+                        days=olgunlasma_penceresi(karsi_olay)
+                    ),
                     kesinlesme_ts=sonraki_donem_yayini.get(anahtar),
                     girdi_ts=girdi,
                     **kw,
@@ -483,6 +513,14 @@ def ozet(olaylar: list[Olay], an: datetime | None = None) -> dict:
         for o in olaylar if o.endeks_yururluk_ts
     ]
     onculler.sort()
+    # Temiz pencere olay tipine duyarlı hesaplanır: ilk bildirimde p95=38,
+    # karşı olayda p95=22 gün. Tek eşik kullanmak karşı olayları haksız
+    # yere değersiz gösterirdi.
+    temiz = sorted(
+        (o.endeks_yururluk_ts - o.olay_ts.date()).days
+        - olgunlasma_penceresi(o.karsi_olay)
+        for o in olaylar if o.endeks_yururluk_ts
+    )
     return {
         "olay": len(olaylar),
         "pay_kodu": len({o.ticker for o in olaylar}),
@@ -493,8 +531,5 @@ def ozet(olaylar: list[Olay], an: datetime | None = None) -> dict:
         "oncul_gun_medyan": onculler[len(onculler) // 2] if onculler else None,
         "oncul_gun_min": onculler[0] if onculler else None,
         "oncul_gun_max": onculler[-1] if onculler else None,
-        # Ödünleşmenin fiyatı: p95 düzeltme penceresi düşünce ne kalıyor?
-        "temiz_pencere_medyan": (
-            onculler[len(onculler) // 2] - DUZELTME_P95_GUN if onculler else None
-        ),
+        "temiz_pencere_medyan": temiz[len(temiz) // 2] if temiz else None,
     }
