@@ -186,6 +186,82 @@ def test_temize_donunce_tolerans_kalkiyor():
     assert kararlar == [Karar.TOLERANSTA, Karar.UYGUN, Karar.TOLERANSTA]
 
 
+def test_ayni_donem_duzeltmesi_zinciri_ilerletmiyor():
+    """GERÇEK VAKA — DCTTR. Aynı dönemin düzeltmesi YENİ DÖNEM DEĞİLDİR.
+
+    `seri_degerlendir` bildirim bazında yürüdüğü sürece üçüncü kayıt,
+    ikinciyi (aynı dönemin düzeltilmiş hâli) "önceki dönem" sanıyor ve
+    "önceki dönem TOLERANSTA + bu dönem aşım → UYGUN_DEGIL" kuralını
+    işletiyordu. Sonuç: XKTUM üyesi bir şirketi eliyorduk (sahte eleme).
+
+    Md. 3.5 ardışık DEĞERLEME DÖNEMLERİNİ düzenliyor. Doğru davranış:
+    2025/Yıllık'ın önceki dönemi 2025/6 Aylık (UYGUN), dolayısıyla ikinci
+    Yıllık kaydı da TOLERANSTA kalır.
+    """
+    d1 = _oranli(gelir=Decimal("0.75"), borc=Decimal("28.82"))
+    d1.yil, d1.periyot = 2025, "6 Aylık"
+    d1.gonderim_ts = datetime(2025, 8, 7, 18, 14)
+    d2 = _oranli(gelir=Decimal("4.97"), borc=Decimal("34.62"))   # DUZELTILEN
+    d2.yil, d2.periyot = 2025, "Yıllık"
+    d2.gonderim_ts = datetime(2026, 3, 10, 18, 0)
+    d3 = _oranli(gelir=Decimal("4.66"), borc=Decimal("35.85"))   # DUZENLENEN
+    d3.yil, d3.periyot = 2025, "Yıllık"
+    d3.gonderim_ts = datetime(2026, 4, 6, 18, 0)
+
+    kararlar = [s.karar for _, s in seri_degerlendir([d1, d2, d3])]
+    assert kararlar == [Karar.UYGUN, Karar.TOLERANSTA, Karar.TOLERANSTA], kararlar
+
+    # Düzeltme kendi döneminin ÖNCEKİSİNİ görmeli, kendi eski kaydını değil.
+    sonuclar = seri_degerlendir([d1, d2, d3])
+    assert sonuclar[2][1].onceki_donem_toleransta is False
+
+
+def test_ayni_donem_uc_bildirim_sonraki_donemi_bir_kez_etkiliyor():
+    """Aynı dönemin üç kaydı, sonraki dönem için TEK bir durum üretir.
+
+    PNLSN örüntüsü (aynı dönem 3 bildirim). Sonraki dönemin gördüğü durum,
+    o dönemin gönderim anında geçerli olan SON kayıttan gelir — look-ahead
+    yok, ama zincir de üç kez ilerlemiyor.
+    """
+    a1 = _oranli(gelir=Decimal("4.0"))
+    a1.yil, a1.periyot = 2025, "6 Aylık"
+    a1.gonderim_ts = datetime(2025, 8, 8, 18, 0)
+    a2 = _oranli(gelir=Decimal("5.3"))          # düzeltme: toleransa düşürdü
+    a2.yil, a2.periyot = 2025, "6 Aylık"
+    a2.gonderim_ts = datetime(2025, 8, 13, 18, 0)
+    a3 = _oranli(gelir=Decimal("5.2"))          # ikinci düzeltme, hâlâ bantta
+    a3.yil, a3.periyot = 2025, "6 Aylık"
+    a3.gonderim_ts = datetime(2025, 9, 4, 18, 0)
+    b1 = _oranli(gelir=Decimal("5.1"))          # sonraki DÖNEM, bantta aşım
+    b1.yil, b1.periyot = 2025, "Yıllık"
+    b1.gonderim_ts = datetime(2026, 3, 4, 18, 0)
+
+    kararlar = [s.karar for _, s in seri_degerlendir([a1, a2, a3, b1])]
+    # İlk üçü aynı dönem: zincir ilerlemiyor, üçü de kendi başına değerlenir.
+    assert kararlar[:3] == [Karar.UYGUN, Karar.TOLERANSTA, Karar.TOLERANSTA]
+    # Sonraki dönem, 6 Aylık'ın SON durumunu (TOLERANSTA) görüyor -> elenir.
+    assert kararlar[3] is Karar.UYGUN_DEGIL
+
+
+def test_zincir_tek_uygulama_panel_delege_ediyor():
+    """`panel.panel_uret` kendi zincirini kurmamalı — iki uygulama ayrışır.
+
+    Bir zamanlar ayrıştılar: `panel.csv` doğruydu ama `cli toplu` sahte
+    eleme üretiyordu.
+    """
+    from katilim import karar as karar_modulu
+    from katilim import panel as panel_modulu
+
+    assert panel_modulu.ZINCIR_BOSLUK_GUN is karar_modulu.ZINCIR_BOSLUK_GUN
+    assert panel_modulu.zincirle_degerlendir is karar_modulu.zincirle_degerlendir
+    kaynak = pathlib.Path(karar_modulu.__file__).with_name("panel.py").read_text(
+        encoding="utf-8"
+    )
+    assert "onceki_donem_anahtari" not in kaynak, (
+        "panel.py yeniden kendi zincirini kuruyor"
+    )
+
+
 def test_siralama_yalniz_gonderim_ts_ile():
     """3/6/9 Aylık ve Yıllık karışık seri: kronoloji dönem etiketinden GELMEZ.
 

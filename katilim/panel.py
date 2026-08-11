@@ -49,7 +49,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from .ayristirici import AyristirmaHatasi, ayristir
-from .karar import Karar, degerlendir
+from .karar import degerlendir
 from .model import KafifBildirim
 from .oranlar import TOLERANS, Oranlar, self_check
 
@@ -359,24 +359,24 @@ def yaz(satirlar: list[PanelSatiri], yol: Path | str | None = None) -> Path:
 # --- Rapor -----------------------------------------------------------------
 
 
-# --- Tarihsel panel: tolerans zinciri (Faz 3.1) ----------------------------
+# --- Tarihsel panel: tolerans zinciri (Faz 3.1 · 2.3 · 4.3) ----------------
 #
-# Snapshot (`snapshot_uret`) her kaydı kendi başına değerlendiriyordu.
-# Burada `karar.seri_degerlendir` devreye giriyor ve tolerans durumu
-# şirket bazında dönemler arasında TAŞINIYOR (H4).
-
-ZINCIR_TEMIZ = ""
-ZINCIR_BOSLUGU = "ZINCIR_BOSLUGU"
-
-# Bir dönemin ATLANDIĞINI gösteren asgari sessizlik. KAFİF yarıyıllık:
-# ardışık bildirimler arası ölçülen medyan 185 gün, p90 206, en uzun 259
-# (1.276 formluk arşiv). 280 gün ≈ 1,5 kadans — bunu aşan aralık, arada
-# bir dönemin hiç verilmediği anlamına gelir.
+# Snapshot (`snapshot_uret`) her kaydı kendi başına değerlendiriyor.
+# Burada tolerans durumu şirket bazında DÖNEMLER arasında taşınıyor (H4).
 #
-# Boşluğu `beyan_durumu` ile aramak YANLIŞ olurdu: panelde satırı olan her
-# şirket zaten BEYAN_VAR'dır, yani o sinyal hiç tetiklenmez ve "boşluk yok"
-# diye yanıltır. Boşluk şirketin KENDİ serisindeki sessizliktir.
-ZINCIR_BOSLUK_GUN = 280
+# ⚠ ZİNCİR MANTIĞI BURADA DEĞİL `karar.zincirle_degerlendir`'DE.
+# Bir zamanlar buradaydı ve `karar.seri_degerlendir` bildirim bazında
+# kaldığı için iki uygulama ayrıştı: `panel.csv` doğru üretiliyordu ama
+# `cli toplu` aynı dönemin düzeltmesini "önceki dönem" sanıp sahte eleme
+# çıkarıyordu. Tek uygulamaya indirildi; buraya kopya açmayın.
+#
+# Aşağıdaki adlar geriye uyumluluk için yeniden dışa veriliyor.
+from .karar import (  # noqa: E402
+    ZINCIR_BOSLUGU,
+    ZINCIR_BOSLUK_GUN,
+    ZINCIR_TEMIZ,
+    zincirle_degerlendir,
+)
 
 
 @dataclass
@@ -409,30 +409,23 @@ def panel_uret(
 ) -> list[KararSatiri]:
     """Her (ticker, bildirim) için tolerans zincirli uygunluk kararı.
 
-    ## ZİNCİR DÖNEM BAZINDA YÜRÜR, BİLDİRİM BAZINDA DEĞİL (2.3)
+    Zincir `karar.zincirle_degerlendir`'e **delege edilir** — dönem bazlı
+    yürüme, sıralama ve boşluk tespiti orada, tek uygulamada.
 
-    Md. 3.5 ardışık **değerleme dönemlerini** düzenliyor. Aynı dönemin
-    düzeltilmiş bir bildirimi YENİ BİR DÖNEM DEĞİLDİR. Zincir bildirim
-    listesi üzerinde yürütülürse, bir düzeltme kendi döneminin önceki
-    kaydını "önceki dönem" sanar ve tolerans sahte biçimde tetiklenir —
-    3.1'in çevirdiği 5 satırın 4'ü (ALVES, DCTTR, DOGUB, KONTR) bu
-    artefakttı.
+    Buranın kendine ait iki kararı var:
 
-    ## Look-ahead korunuyor (spec §5.1)
-
-    P(n) değerlendirilirken "önceki dönem durumu", P(n−1)'in **P(n)'in
-    gönderim anında geçerli olan** kaydından gelir — P(n−1)'in bugünkü
-    nihai kaydından değil. Bu, bildirimleri gönderim sırasıyla işleyip
-    dönem durumunu yol boyunca güncelleyerek sağlanıyor: P(n) işlenirken
-    P(n−1) için saklanan durum, tam olarak o ana kadar yayımlanmış en son
-    kayıttan gelmiş olur.
+    1. **Dönem anahtarı META VERİDEN** (`ArsivKayit.yil`/`periyot`), formun
+       kendi etiketinden değil: 1.276 formun 20'sinde ikisi ayrışıyor
+       ("Yıllık" → "4. 3 Aylık Bildirim"). Bu yüzden `anahtar_fn` açıkça
+       geçiliyor; `zincirle_degerlendir`'in varsayılanı bildirimin kendi
+       alanlarına bakar.
+    2. **Oranlar ÖZET alanından** (H5 varsayılanı, spec §2.3) — snapshot'ın
+       `karar` sütunuyla aynı kaynak.
 
     **Panel satırı her bildirim için ayrı kalır** (o kayıt kendi
     penceresinde canlı etiketti) ama yalnız kendi döneminin durumunu
     günceller; zinciri ilerletmez.
     """
-    from .karar import degerlendir
-
     muafiyet = {s.ticker: s.mali_sektor_muaf for s in evren_sirketler}
     beyan_durumlari = beyan_durumlari or {}
 
@@ -445,67 +438,29 @@ def panel_uret(
     satirlar: list[KararSatiri] = []
     for ticker, kayit_listesi in sorted(per_ticker.items()):
         muaf = muafiyet.get(ticker) is True
-        sirali = sorted(
-            kayit_listesi,
-            key=lambda k: (k.gonderim_ts is None, k.gonderim_ts or datetime.min),
-        )
 
-        # Dönem sırası: her dönemin İLK gönderimine göre. Dönem etiketi
-        # kronoloji taşımıyor (futbol kulüpleri "2024/Yıllık"ı ağustosta
-        # veriyor), bu yüzden sıra yine zaman damgasından türetiliyor.
-        ilk_gonderim: dict[tuple, datetime] = {}
-        for k in sirali:
-            anahtar = (k.yil, k.periyot)
-            if anahtar not in ilk_gonderim and k.gonderim_ts:
-                ilk_gonderim[anahtar] = k.gonderim_ts
-        donem_sirasi = [a for a, _ in sorted(ilk_gonderim.items(), key=lambda kv: kv[1])]
-        onceki_donem_anahtari = {
-            d: (donem_sirasi[i - 1] if i else None)
-            for i, d in enumerate(donem_sirasi)
-        }
-
-        # Dönem -> o ana kadar yayımlanmış en son kaydın TOLERANSTA olup
-        # olmadığı. Nokta-zaman: gönderim sırasıyla güncelleniyor.
-        donem_durumu: dict[tuple, bool] = {}
-        # Zincir boşluğu: dönemler arası sessizlik
-        bosluklu_donemler: set[tuple] = set()
-        for onceki_d, sonraki_d in zip(donem_sirasi, donem_sirasi[1:]):
-            fark = (ilk_gonderim[sonraki_d] - ilk_gonderim[onceki_d]).days
-            if fark > ZINCIR_BOSLUK_GUN:
-                bosluklu_donemler.add(sonraki_d)
-
-        for k in sirali:
+        def _karar(k, onceki_tol, _muaf=muaf):
             b = k.bildirim
-            anahtar = (k.yil, k.periyot)
-            onceki_anahtar = onceki_donem_anahtari.get(anahtar)
-            onceki_tol = (
-                donem_durumu.get(onceki_anahtar, False)
-                if onceki_anahtar is not None else False
-            )
-
             # Oranlar ÖZET alanından — snapshot'ın `karar` sütunuyla AYNI
             # kaynak (H5 varsayılanı).
             ozet = Oranlar(b.ozet_gelir_orani, b.ozet_varlik_orani, b.ozet_borc_orani)
-            s = degerlendir(
+            return degerlendir(
                 b,
-                mali_sektor_muaf=muaf,
+                mali_sektor_muaf=_muaf,
                 onceki_donem_toleransta=onceki_tol,
                 oranlar=ozet,
             )
 
-            # Bu kayıt KENDİ döneminin durumunu günceller; zinciri
-            # ilerletmez.
-            #
-            # BELIRSIZ durumu SIFIRLAMAZ (kural 2'nin zincir karşılığı:
-            # veri eksikliği "temize çıkma" değildir). Dönem bazlı zincirde
-            # bu, durumu "yok" bırakmak DEĞİL, önceki dönemin durumunu
-            # DEVRALMAK demektir — yok bırakmak sonraki dönem için sessizce
-            # `False` üretir ve toleransı sıfırlar.
-            donem_durumu[anahtar] = (
-                onceki_tol if s.karar == Karar.BELIRSIZ
-                else s.karar == Karar.TOLERANSTA
-            )
+        zincir = zincirle_degerlendir(
+            kayit_listesi,
+            _karar,
+            # Dönem anahtarı META VERİDEN, formun kendi etiketinden değil.
+            anahtar_fn=lambda k: (k.yil, k.periyot),
+            zaman_fn=lambda k: k.gonderim_ts,
+        )
 
+        for k, s, zincir_notu in zincir:
+            b = k.bildirim
             kontrol = self_check(b)
             o = s.oranlar
             satirlar.append(
@@ -523,9 +478,7 @@ def panel_uret(
                     sablon_versiyon=b.sablon_imzasi,
                     self_check="GECTI" if kontrol.gecti else "KALDI",
                     bildirim_id=k.bildirim_id,
-                    zincir_notu=(
-                        ZINCIR_BOSLUGU if anahtar in bosluklu_donemler else ZINCIR_TEMIZ
-                    ),
+                    zincir_notu=zincir_notu,
                     duzeltme_izi=k.duzeltme_izi,
                     gecerli_kayit=False,      # aşağıda işaretleniyor
                 )

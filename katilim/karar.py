@@ -174,56 +174,149 @@ def degerlendir(
     return KararSonucu(Karar.TOLERANSTA, kodlar, gerekceler, o, asimlar, False)
 
 
+# --- Tolerans zinciri: TEK UYGULAMA ----------------------------------------
+#
+# ⚠ Bu bölüm zincirin **tek** uygulamasıdır. `panel.panel_uret` buraya
+# delege eder; bir zamanlar kendi kopyasını taşıyordu ve `seri_degerlendir`
+# bildirim bazında kalınca ikisi ayrıştı: `panel.csv` doğru, `cli toplu`
+# sahte eleme üretiyordu. İkinci bir kopya açmayın.
+
+ZINCIR_TEMIZ = ""
+ZINCIR_BOSLUGU = "ZINCIR_BOSLUGU"
+
+# Bir dönemin ATLANDIĞINI gösteren asgari sessizlik. KAFİF yarıyıllık:
+# ardışık bildirimler arası ölçülen medyan 185 gün, p90 206, en uzun 259
+# (1.276 formluk arşiv). 280 gün ≈ 1,5 kadans — bunu aşan aralık, arada
+# bir dönemin hiç verilmediği anlamına gelir.
+#
+# Boşluğu beyan durumuyla aramak YANLIŞ olurdu: panelde satırı olan her
+# şirket zaten BEYAN_VAR'dır, yani o sinyal hiç tetiklenmez ve "boşluk yok"
+# diye yanıltır. Boşluk şirketin KENDİ serisindeki sessizliktir.
+ZINCIR_BOSLUK_GUN = 280
+
+
+def _zaman(b) -> datetime | None:
+    return getattr(b, "gonderim_ts", None)
+
+
+def _donem(b) -> tuple:
+    return (getattr(b, "yil", None), getattr(b, "periyot", None))
+
+
+def zincirle_degerlendir(
+    ogeler: list,
+    karar_fn,
+    *,
+    anahtar_fn=_donem,
+    zaman_fn=_zaman,
+    bosluk_gun: int = ZINCIR_BOSLUK_GUN,
+) -> list[tuple[object, KararSonucu, str]]:
+    """Tolerans zincirini DÖNEM bazında yürütür. Zincirin tek uygulaması.
+
+    ## ZİNCİR DÖNEM BAZINDA YÜRÜR, BİLDİRİM BAZINDA DEĞİL (2.3)
+
+    Md. 3.5 ardışık **değerleme dönemlerini** düzenliyor. Aynı dönemin
+    düzeltilmiş bir bildirimi YENİ BİR DÖNEM DEĞİLDİR. Zincir bildirim
+    listesi üzerinde yürütülürse bir düzeltme, kendi döneminin önceki
+    kaydını "önceki dönem" sanar ve toleransı sahte biçimde tetikler —
+    3.1'in çevirdiği 5 satırın 4'ü (ALVES, DCTTR, DOGUB, KONTR) bu
+    artefakttı.
+
+    ## Sıralama yalnız zaman damgasıyla
+
+    Dönem etiketi kronoloji taşımıyor: 1.2 ölçtü ki periyot yalnız
+    6 Aylık/Yıllık değil (`9 Aylık` 7, `3 Aylık` 5 kayıt), ve futbol
+    kulüpleri 31 Mayıs kapanışı yüzünden "2024/Yıllık"ı ağustosta veriyor.
+    Dönem SIRASI da bu yüzden her dönemin **ilk gönderiminden** türetiliyor.
+
+    Zaman damgası olmayan kayıt en SONA konur: bilinmeyen bir tarihi
+    geçmişe yerleştirmek sonraki dönemlerin durumunu sessizce değiştirirdi.
+
+    ## Look-ahead korunuyor (spec §5.1)
+
+    P(n) değerlendirilirken "önceki dönem durumu", P(n−1)'in **P(n)'in
+    gönderim anında geçerli olan** kaydından gelir — bugünkü nihai
+    kaydından değil. Öğeler gönderim sırasıyla işlenip dönem durumu yol
+    boyunca güncellendiği için bu kendiliğinden sağlanıyor.
+
+    `karar_fn(oge, onceki_donem_toleransta) -> KararSonucu`.
+
+    Döner: `(öğe, karar, zincir_notu)` üçlüleri, gönderim sırasında.
+    """
+    sirali = sorted(
+        ogeler,
+        key=lambda o: (zaman_fn(o) is None, zaman_fn(o) or datetime.min),
+    )
+
+    # Dönem sırası: her dönemin İLK gönderimine göre.
+    ilk_gonderim: dict[tuple, datetime] = {}
+    for o in sirali:
+        a, t = anahtar_fn(o), zaman_fn(o)
+        if a not in ilk_gonderim and t:
+            ilk_gonderim[a] = t
+    donem_sirasi = [a for a, _ in sorted(ilk_gonderim.items(), key=lambda kv: kv[1])]
+    onceki_anahtari = {
+        d: (donem_sirasi[i - 1] if i else None) for i, d in enumerate(donem_sirasi)
+    }
+
+    # Zincir boşluğu: ardışık DÖNEMLER arası sessizlik.
+    bosluklu: set[tuple] = set()
+    for a, b in zip(donem_sirasi, donem_sirasi[1:]):
+        if (ilk_gonderim[b] - ilk_gonderim[a]).days > bosluk_gun:
+            bosluklu.add(b)
+
+    # Dönem -> o ana kadar yayımlanmış en son kaydın TOLERANSTA olup olmadığı.
+    donem_durumu: dict[tuple, bool] = {}
+    sonuclar = []
+    for o in sirali:
+        a = anahtar_fn(o)
+        onceki_a = onceki_anahtari.get(a)
+        onceki_tol = donem_durumu.get(onceki_a, False) if onceki_a is not None else False
+
+        s = karar_fn(o, onceki_tol)
+
+        # Bu kayıt KENDİ döneminin durumunu günceller; zinciri ilerletmez.
+        #
+        # BELIRSIZ durumu SIFIRLAMAZ (kural 2'nin zincir karşılığı: veri
+        # eksikliği "temize çıkma" değildir). Dönem bazlı zincirde bu,
+        # durumu "yok" bırakmak DEĞİL önceki dönemin durumunu DEVRALMAK
+        # demektir — yok bırakmak sonraki dönem için sessizce `False`
+        # üretir ve toleransı sıfırlar.
+        donem_durumu[a] = (
+            onceki_tol if s.karar == Karar.BELIRSIZ else s.karar == Karar.TOLERANSTA
+        )
+        sonuclar.append(
+            (o, s, ZINCIR_BOSLUGU if a in bosluklu else ZINCIR_TEMIZ)
+        )
+    return sonuclar
+
+
 def seri_degerlendir(
     bildirimler: list[KafifBildirim],
     *,
     mali_sektor_muaf: bool = False,
     oranlar_fn=None,
 ) -> list[tuple[KafifBildirim, KararSonucu]]:
-    """Bir şirketin bildirimlerini kronolojik sırayla değerlendirir.
+    """Bir şirketin bildirimlerini dönem bazlı zincirle değerlendirir.
 
     Tolerans durumu şirket bazında taşınır (H4), kriter bazında değil:
     gelir kriterinden toleransa düşüp sonraki dönem borç kriterinde
     aşan bir şirket elenir.
+
+    Zincir mantığı `zincirle_degerlendir`'de — tek uygulama.
 
     `oranlar_fn`: bildirim -> `Oranlar`. Verilmezse oranlar kalemlerden
     hesaplanır. **Panel bunu ÖZET alanını verecek şekilde geçiyor** (H5
     varsayılanı, spec §2.3): iki farklı oran kaynağı kullanmak snapshot ile
     tarihsel paneli sessizce ayrıştırırdı.
     """
-    # SIRALAMA YALNIZ `gonderim_ts` İLE. Dönem etiketi kronoloji taşımıyor:
-    #
-    #   - Eski anahtar `(yil, 0 if periyot=="6 Aylık" else 1, ...)` idi ve
-    #     1.2 ölçtü ki periyot yalnız 6 Aylık/Yıllık değil — `9 Aylık` (7)
-    #     ve `3 Aylık` (5) da var. Üçü de aynı kovaya (1) düşüyordu, yani
-    #     mayısta verilen bir 3 Aylık, ağustosta verilen 6 Aylık'tan SONRA
-    #     sıralanıyordu.
-    #   - Yıl bile güvenilir değil: futbol kulüpleri 31 Mayıs kapanışı
-    #     yüzünden "2024/Yıllık" formunu Ağustos 2025'te veriyor.
-    #
-    # Tolerans durum makinesi bu sırayı yürüdüğü için yanlış sıra doğrudan
-    # yanlış karar üretir. Spec §5.1 geçerlilik anını `gonderim_ts`'e
-    # bağlıyor; sıralama da aynı alana bağlı olmalı.
-    #
-    # Zaman damgası olmayan kayıt EN BAŞA değil en SONA konuyor: bilinmeyen
-    # bir tarihin geçmişe yerleştirilmesi, sonraki dönemlerin tolerans
-    # durumunu sessizce değiştirirdi.
-    sirali = sorted(
-        bildirimler,
-        key=lambda b: (b.gonderim_ts is None, b.gonderim_ts or datetime.min),
-    )
-    sonuclar = []
-    onceki_toleransta = False
-    for b in sirali:
-        s = degerlendir(
+
+    def _karar(b, onceki_tol):
+        return degerlendir(
             b,
             mali_sektor_muaf=mali_sektor_muaf,
-            onceki_donem_toleransta=onceki_toleransta,
+            onceki_donem_toleransta=onceki_tol,
             oranlar=oranlar_fn(b) if oranlar_fn else None,
         )
-        sonuclar.append((b, s))
-        # BELIRSIZ durumunda önceki durumu koruyoruz; veri eksikliği
-        # toleransı sıfırlamamalı.
-        if s.karar != Karar.BELIRSIZ:
-            onceki_toleransta = s.karar == Karar.TOLERANSTA
-    return sonuclar
+
+    return [(b, s) for b, s, _not in zincirle_degerlendir(bildirimler, _karar)]

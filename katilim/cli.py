@@ -581,6 +581,22 @@ def cmd_ozet(args) -> int:
     return 1 if (kotu or kesildi) else 0
 
 
+def _en_yeni_snapshot() -> str:
+    """`veri/panel/` içindeki en yeni `snapshot_*.csv`.
+
+    Sabit bir dosya adı (eskiden `snapshot_20260808.csv`) panel yeniden
+    üretildiğinde sessizce BAYAT veriyle mutabakat koşturuyordu. Ad kalıbı
+    `snapshot_YYYYMMDD.csv` olduğu için sözlük sırası = tarih sırası.
+
+    Hiç snapshot yoksa yol UYDURULMAZ: var olmayan bir ad dönülür ve
+    `mutabakat` okurken `MutabakatGirdisiYok` fırlatır (kural 7 — "dosya
+    yok" sessizce "kayıt yok"a dönüşmemeli).
+    """
+    dizin = pathlib.Path("veri/panel")
+    adaylar = sorted(dizin.glob("snapshot_*.csv"))
+    return str(adaylar[-1]) if adaylar else str(dizin / "snapshot_YOK.csv")
+
+
 def _mut_donem_csv():
     from . import mutabakat
     return mutabakat.DONEM_CSV
@@ -780,7 +796,7 @@ def main(argv=None) -> int:
     sp.add_argument("--donem-csv", default=str(_mut_donem_csv()))
     sp.add_argument("--olay-csv", default=str(_mut_olay_csv()))
     sp.add_argument("--duzeltme-csv", default="veri/panel/duzeltme_olaylari.csv")
-    sp.add_argument("--panel-csv", default="veri/panel/snapshot_20260808.csv")
+    sp.add_argument("--panel-csv", default=_en_yeni_snapshot())
     sp.add_argument("--endeks-csv", default="veri/evren/endeks_uyeligi.csv")
     sp.add_argument("--beyan-csv", default="veri/evren/beyan_durumu.csv")
     sp.add_argument("--evren-csv", default=str(evren.EVREN_CSV))

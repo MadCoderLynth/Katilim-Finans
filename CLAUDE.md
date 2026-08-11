@@ -70,6 +70,30 @@ Test kırıldığında **kuralı değil kodu düzeltin.**
    Bu, kural 2'nin (eksik beyan ≠ hayır beyanı) toplama katmanındaki karşılığı:
    her ikisinde de eksik veri, temiz veri gibi görünerek geçiyor.
 
+## Tolerans zinciri — TEK UYGULAMA (11 Ağu 2026)
+
+Zincir yalnız **`karar.zincirle_degerlendir`**'de. `panel.panel_uret` ve
+`karar.seri_degerlendir` ikisi de ona delege eder; `panel.py` zincir
+adlarını (`ZINCIR_BOSLUGU`, `ZINCIR_BOSLUK_GUN`, `ZINCIR_TEMIZ`) geriye
+uyumluluk için yeniden dışa veriyor. **İkinci bir kopya açmayın.**
+
+Neden: 2.3 zinciri dönem bazına çevirdi ama yalnız `panel_uret`'te.
+`seri_degerlendir` bildirim bazında kaldı ve iki uygulama ayrıştı —
+`panel.csv` doğruydu, `cli toplu` aynı dönemin düzeltmesini "önceki
+dönem" sanıp **sahte eleme** üretiyordu. Gerçek vaka DCTTR: üç formunda
+`toplu` `UYGUN / TOLERANSTA / UYGUN_DEGIL` diyordu, doğrusu üçüncüde de
+`TOLERANSTA`. Testler: `test_ayni_donem_duzeltmesi_zinciri_ilerletmiyor`,
+`test_zincir_tek_uygulama_panel_delege_ediyor`.
+
+Delegasyon doğrulandı: `panel.csv` ve `snapshot_*.csv` yeniden üretildi,
+**ikisi de birebir aynı** kaldı.
+
+`panel_uret`'in zincire eklediği tek şey **dönem anahtarının meta
+veriden** gelmesi (`ArsivKayit.yil/periyot`), formun kendi etiketinden
+değil. `cli toplu`'nun meta verisi yok, form etiketini kullanıyor —
+ölçüldü, mevcut arşivde **0 grupta** fark üretiyor (163 düzeltme
+grubunun hepsinde form etiketi grup içinde tutarlı).
+
 ## Bilinen hata — DÜZELTİLDİ (3.1, 10 Ağu 2026)
 
 ~~`karar.py:187` sıralama anahtarı bozuk.~~ `seri_degerlendir` artık
@@ -122,6 +146,10 @@ Bir hipotez revize edilirse spec ve kod aynı commit'te güncellenir.
 Sentetik HTML'i, gerçek HTML'e uydurmak için değiştirmek anlamsızdır — gerçek
 doğrulama `dogrula` komutunu gerçek bir dosyayla çalıştırmaktır.
 
+**Dış çapraz doğrulama** (11 Ağu 2026, n=1, tekrarlanmayacak): Fintables'ın
+bağımsız KAFİF parser'ı RYGYO 2025/Yıllık'ta aynı üç oranı üretiyor
+(12,81 / 5,26 / 13,10). Kayıt amaçlı; rutin kontrol değil.
+
 ## Sıradaki iş
 
 **Faz planı ve her adımın promptu: @PROJE_PLANI.md.** Adım sırası, çıkış
@@ -135,7 +163,7 @@ keşfi · **1.2** bildirim sorguları · **1.4a** form arşivi · **1.3** parser
 kapısı · **1.4b** snapshot paneli · **1.1b** özet sayfaları · **4.0** ön
 mutabakat · **2.3** düzeltme çözümü · **3.1** tolerans zinciri ·
 **4.1** XKTUM tarihsel referansı · **4.2** değişim mutabakatı.
-Testler: 210 geçiyor (24 motor + 9 çekici + 24 evren + 8 derinlik +
+Testler: 213 geçiyor (27 motor + 9 çekici + 24 evren + 8 derinlik +
 16 bildirim + 7 rsc + 13 toplayıcı + 9 pilot + 28 panel + 20 özet +
 16 mutabakat + 13 xktum + 23 değişim).
 
@@ -186,6 +214,11 @@ Aşağıdakiler rapora değil buraya ait: sonraki her adımı bağlıyorlar.
   YAZILMAZ.** 1.2'de 55, 1.4a'da 114 form bu ayrım sayesinde kurtarıldı.
 - **`toplayici.py` tek sabit pencere toplayıcısıdır** — sayfalama döngüsü
   yazmayın (92=92).
+- **Tolerans zinciri TEK uygulama: `karar.zincirle_degerlendir`.**
+  `seri_degerlendir` ve `panel.panel_uret` ona delege eder; ikinci bir
+  kopya açmayın (aynı hata iki kez buradan çıktı, yapısal test var).
+  Mutabakatın girdisi **zincirli panel** (`panel.csv`) — snapshot zincirsiz
+  olduğu için BIST'in md. 3.5 uygulayan kararıyla kıyaslanamaz.
 - **Düzeltme sinyali `isChanged` alanından gelir**, metin aramasından
   değil. `DUZENLENEN` / `DUZELTILEN` ayrı taşınır, fark belgelenmemiş.
 - **Revizyon takvimi düzenli DEĞİL:** 01.07.2024 → 01.12.2024 →
