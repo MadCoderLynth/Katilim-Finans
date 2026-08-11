@@ -140,8 +140,14 @@ Görev: Olayların fiyat etkisini ÖLÇ (spec §5.3, DEVIR_NOTU §2.5).
 2. Endekse GİRENLERDE simetrik etki var mı?
 3. Etkinin katılım fonu sahiplik yoğunluğuyla ilişkisi var mı?
 
-Fiyat verisi: mevcut swing trading sistemimin veri katmanından mı gelecek,
-ayrı mı çekilecek? Bunu bana sor, varsayma.
+Fiyat verisi: **mevcut swing trading sistemimin veri katmanı** (karar
+verildi, 11 Ağu). Arayüzünü ben anlatacağım; varsayma, sor. Yeni bir
+fiyat kaynağı çekmeye kalkma — bölünme/temettü düzeltmesi orada zaten
+yapılmış durumda ve iki kaynak iki farklı düzeltilmiş seri demek.
+
+KARŞI OLAY EŞİĞİ AYRI: ilk olay için olgunluk +38g, karşı olay için
++22g (5.1 devri; ikinci düzeltme dağılımı n=16, medyan 4g, p95 22g).
+"38 gün" karşı olaya uygulanırsa pencere yapay olarak negatif çıkar.
 
 Yöntem disiplini:
 - Piyasa/endeks getirisine göre düzeltilmiş getiri (ham getiri değil)
@@ -160,12 +166,26 @@ büyüklüğü yazılı; sonuç cümlesi net.
 ---
 
 
-## 5.3 — Trading sistemine bağlama
+## 5.3 — `katilim.api` · **SIRADAKİ** · ağ isteği yok
+
+> **5.2'den öne alındı (11 Ağu 2026).** Motor 4.2'de doğrulandı; eksik
+> olan arayüz. 5.2'nin sonucu entegrasyonun *şeklini* etkiliyor, arayüzü
+> değil — iki fonksiyon şimdi yazılabilir ve risk filtresi olarak
+> bugün bağlanabilir.
+>
+> **Önce küçük bir düzeltme (5.1'den devir):** `olgunlasma_ts` olay
+> tipine duyarlı olmalı. `+38g` eşiği ilk-bildirimden-ilk-düzeltmeye
+> dağılımının p95'i; karşı olay zaten bir düzeltme olduğu için onun
+> eşiği **ikinci düzeltme** dağılımından gelir: n=16, medyan 4g,
+> **p95 22g**. İlk olay +38g, karşı olay +22g. Testini ekle.
+> (Düzeltmelerin %90,2'si bir daha düzeltilmiyor; 16 ikinci düzeltmenin
+> 10'u ≤7 gün.)
 
 ```
 Görev: Uygunluk modülünü swing trading sistemine bağla.
 
-Ön koşul: 5.2'nin sonucu. Sonuca göre iki farklı entegrasyon:
+Ön koşul: 5.1 ✔. 5.2 ÖN KOŞUL DEĞİL — sonuca göre iki farklı
+entegrasyon biçimi var ama arayüz ikisinde de aynı:
 
 Etki BULUNDUYSA: olay akışı katalizör sinyali olarak bağlanır;
 pozisyon boyutuna etkisi 5.2'deki etki büyüklüğünden türetilir.

@@ -21,6 +21,7 @@ python3 -m katilim.cli ozet --butce 800                   # pazar/sektör/endeks
 python3 -m katilim.cli mutabakat                          # ön mutabakat (Faz 4.0)
 python3 arac/xktum_referans.py --indir --ayristir --kur    # XKTUM referansı (Faz 4.1)
 python3 -m katilim.cli mutabakat --donem 2026-05          # değişim mutabakatı (Faz 4.2)
+python3 -m katilim.cli olaylar                            # olay serisi (Faz 5.1)
 python3 -m katilim.cli dogrula veri/ham/DOSYA.html        # ayrıştır + self-check + karar
 python3 -m katilim.cli dok veri/ham/DOSYA.html            # tanı: tabloları imzalarıyla dök
 python3 -m katilim.cli toplu veri/ham --csv veri/panel/panel.csv
@@ -162,17 +163,43 @@ Biten: **Faz 0** · **1.0** rota keşfi · **1.1** evren · **2.0** derinlik
 keşfi · **1.2** bildirim sorguları · **1.4a** form arşivi · **1.3** parser
 kapısı · **1.4b** snapshot paneli · **1.1b** özet sayfaları · **4.0** ön
 mutabakat · **2.3** düzeltme çözümü · **3.1** tolerans zinciri ·
-**4.1** XKTUM tarihsel referansı · **4.2** değişim mutabakatı.
-Testler: 213 geçiyor (27 motor + 9 çekici + 24 evren + 8 derinlik +
+**4.1** XKTUM tarihsel referansı · **4.2** değişim mutabakatı ·
+**5.1** olay serisi.
+Testler: 238 geçiyor (27 motor + 9 çekici + 24 evren + 8 derinlik +
 16 bildirim + 7 rsc + 13 toplayıcı + 9 pilot + 28 panel + 20 özet +
-16 mutabakat + 13 xktum + 23 değişim).
+16 mutabakat + 13 xktum + 23 değişim + 25 olay).
 
 **DOĞRULAMA KAPISI GEÇİLDİ.** 4.2'de 95/95 olay uyuştu, uyuşmazlık sıfır;
 testin gücü ölçüldü (taban %47/%53, şansla olma olasılığı ≈10⁻²⁹).
 Spec §4'ün "Faz 4 öncesi panel araştırma çıktısıdır" kaydı artık geçmişte.
 
-Sıradaki: **5.1** (olay serisi) → **5.3** (`katilim.api`). İkisi de ağa
-çıkmıyor ve motoru kullanılabilir hale getiren tek eksik onlar.
+**Faz 5.1 bitti — 206 olay / 137 pay kodu.** Ayrıntı:
+@OLAY_SERISI_RAPORU.md (`katilim/olay.py`, 0 istek).
+
+- **Karşı olayların temiz penceresi NEGATİF.** Öncüllük medyanı ilk
+  bildirimde 56 gün (p95 sonrası **+18**), karşı olayda 28 gün (p95
+  sonrası **−10**). Düzeltmeden gelen bilgi ancak hızlı işlem edilirse
+  kullanılabilir — ki düzeltme riskinin en yüksek olduğu rejim odur.
+  5.2'nin ölçeceği ödünleşmenin sayısal çekirdeği bu.
+- **Olgunluk ETİKET değil TARİH olarak saklanıyor** (`olgunlasma_ts` =
+  olay+38g, `kesinlesme_ts` = sonraki dönemin yayını). Etiketi dosyaya
+  gömmek backtest'i hesaplandığı ana kilitlerdi; `Olay.kesinlik(t)`
+  çağıranın kendi saatiyle karşılaştırıyor.
+- **Düzeltme İPTAL etmiyor, KARŞI OLAY üretiyor** (84/206). Silmek
+  look-ahead'a davetiye: o sinyal gerçekten yayımlanmıştı.
+- **`g1_teyitsiz` 68 olayda açık** — 2.3'ün G1 bulgusu koda girdi.
+- **Look-ahead denetimi üç katmanlı ve MUTASYONLA kanıtlandı.** Üç
+  kasıtlı hata enjekte edildi, üçü de yakalandı. En sinsi olan
+  `gecerli_kayit=EVET` süzgeci — karşı olayları tümüyle siliyor ve
+  seriyi olduğundan temiz gösteriyor; nokta-zaman replay yakaladı.
+- **Gözden geçirmede açık bulundu ve kapatıldı:** replay testi paneli
+  kırpıyordu ama TAKVİMİ kırpmıyordu, dolayısıyla `sonraki_yururluk`'un
+  duyuru filtresi kaldırılsa yakalayamazdı. Ayrı test eklendi.
+- **`endeks_yururluk_ts` duyurusu geçmiş revizyondan türetiliyor** —
+  28.09.2025'te yayımlanan form doğru biçimde 01.05.2026'ya bağlanıyor.
+
+Sıradaki: **5.2** (fiyat etkisi — **KAYNAK SEÇİLMEDİ, açık karar**) →
+**5.3** (`katilim.api`). 5.3 ağa çıkmıyor.
 Ertelenen/düşürülenler ve gerekçeleri @PROJE_PLANI.md'de.
 
 Her tamamlanmış adımın ölçümü kendi raporunda; **bu dosya onları
@@ -191,6 +218,7 @@ tekrarlamaz.** Anlatı arşivi: @PLAN_ARSIV.md (otomatik yüklenmez).
 | 4.0 ön mutabakat | @ON_MUTABAKAT_20260810.md |
 | 4.1 XKTUM referansı | @XKTUM_REFERANS_RAPORU.md |
 | 4.2 değişim mutabakatı | @MUTABAKAT_2025-10.md · @MUTABAKAT_2026-05.md |
+| 5.1 olay serisi | @OLAY_SERISI_RAPORU.md |
 
 ### Kalıcı olarak taşınan bulgular
 

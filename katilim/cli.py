@@ -581,6 +581,53 @@ def cmd_ozet(args) -> int:
     return 1 if (kotu or kesildi) else 0
 
 
+def cmd_olaylar(args) -> int:
+    """Faz 5.1 — panelden look-ahead'sız olay serisi. Ağa çıkmaz."""
+    from datetime import datetime as _dt
+
+    from . import olay
+
+    kesim = None
+    if args.kesim:
+        kesim = _dt.strptime(args.kesim, "%Y-%m-%d").replace(
+            hour=23, minute=59, second=59
+        )
+    try:
+        olaylar = olay.olaylari_uret(args.panel_csv, args.donem_csv, kesim=kesim)
+    except olay.OlayGirdisiYok as e:
+        print(f"GİRDİ YOK: {e}", file=sys.stderr)
+        return 2
+
+    o = olay.ozet(olaylar, kesim)
+    print(f"OLAY SERİSİ{f' (kesim {args.kesim})' if args.kesim else ''}")
+    print(f"  olay / pay kodu   : {o['olay']} / {o['pay_kodu']}")
+    print(f"  tip               : {o['tip']}")
+    print(f"  olgunluk          : {o['kesinlik']}"
+          f"   (eşik p95={olay.DUZELTME_P95_GUN} gün)")
+    print(f"  karşı olay        : {o['karsi_olay']}  (düzeltme; İPTAL yok)")
+    print(f"  G1 teyitsiz       : {o['g1_teyitsiz']}  "
+          "(olumlu karar, düzeltmeyle teyit edilmemiş)")
+    print(f"  öncüllük (gün)    : medyan {o['oncul_gun_medyan']} "
+          f"[{o['oncul_gun_min']}..{o['oncul_gun_max']}]")
+    print(f"  p95 sonrası temiz : {o['temiz_pencere_medyan']} gün "
+          "<- hız/kesinlik ödünleşmesinin fiyatı (5.2 bunu ölçecek)")
+
+    # İlk bildirim ile karşı olayı AYIRARAK göster: ikisinin penceresi
+    # farklı ve 5.2 iki rejimi ayrı ölçecek.
+    for ad, alt in (("ilk bildirim", [x for x in olaylar if not x.karsi_olay]),
+                    ("karşı olay  ", [x for x in olaylar if x.karsi_olay])):
+        g = sorted((x.endeks_yururluk_ts - x.olay_ts.date()).days
+                   for x in alt if x.endeks_yururluk_ts)
+        if g:
+            med = g[len(g) // 2]
+            print(f"    {ad}: n={len(alt):3d}  öncüllük medyan {med:3d} gün  "
+                  f"-> p95 sonrası {med - olay.DUZELTME_P95_GUN:+d} gün")
+
+    yol = olay.yaz(olaylar, args.csv or olay.OLAY_CSV)
+    print(f"\n  {len(olaylar)} olay -> {yol}")
+    return 0
+
+
 def _en_yeni_snapshot() -> str:
     """`veri/panel/` içindeki en yeni `snapshot_*.csv`.
 
@@ -766,6 +813,16 @@ def main(argv=None) -> int:
                     help="duman testi: yalnız ilk N pay kodunun formları")
     sp.add_argument("--her", type=int, default=50, help="kaç bildirimde bir ilerleme bas")
     sp.set_defaults(fn=cmd_indir)
+
+    sp = alt.add_parser("olaylar")
+    sp.add_argument("--panel-csv", default="veri/panel/panel.csv")
+    sp.add_argument("--donem-csv", default="veri/referans/xktum_donemler.csv")
+    sp.add_argument("--csv", default=None,
+                    help="çıktı yolu (varsayılan: veri/panel/olaylar.csv)")
+    sp.add_argument("--kesim", default=None,
+                    help="YYYY-MM-DD — seriyi o tarihteki veriyle üret "
+                         "(nokta-zaman yeniden üretim)")
+    sp.set_defaults(fn=cmd_olaylar)
 
     sp = alt.add_parser("panel")
     sp.add_argument("--ham", default="veri/ham")
